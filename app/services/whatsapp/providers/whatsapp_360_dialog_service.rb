@@ -106,6 +106,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
   def template_body_parameters(template_info)
     {
       name: template_info[:name],
+      category: template_info[:category], # added for V2 compatibility : https://docs.360dialog.com/partner/messaging/template-messages
       namespace: template_info[:namespace],
       language: {
         policy: 'deterministic',
