@@ -33,7 +33,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
 
   def validate_provider_config?
     response = HTTParty.post(
-      "#{api_base_path}/configs/v1/webhook",
+      "#{api_base_path}/v1/configs/webhook",
       headers: { 'D360-API-KEY': whatsapp_channel.provider_config['api_key'], 'Content-Type': 'application/json' },
       body: {
         url: "#{ENV.fetch('FRONTEND_URL', nil)}/webhooks/whatsapp/#{whatsapp_channel.phone_number}"
@@ -47,7 +47,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
   end
 
   def media_url(media_id)
-    "#{api_base_path}/media/#{media_id}"
+    "#{api_base_path}/#{media_id}"
   end
 
   private
@@ -126,6 +126,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
       "#{api_base_path}/messages",
       headers: api_headers,
       body: {
+        messaging_product: 'whatsapp',
         to: phone_number,
         interactive: payload,
         type: 'interactive'
