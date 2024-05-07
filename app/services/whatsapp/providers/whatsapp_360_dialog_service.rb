@@ -14,6 +14,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
       "#{api_base_path}/messages",
       headers: api_headers,
       body: {
+        messaging_product: 'whatsapp',
         to: phone_number,
         template: template_body_parameters(template_info),
         type: 'template'
@@ -32,7 +33,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
 
   def validate_provider_config?
     response = HTTParty.post(
-      "#{api_base_path}/configs/webhook",
+      "#{api_base_path}/configs/v1/webhook",
       headers: { 'D360-API-KEY': whatsapp_channel.provider_config['api_key'], 'Content-Type': 'application/json' },
       body: {
         url: "#{ENV.fetch('FRONTEND_URL', nil)}/webhooks/whatsapp/#{whatsapp_channel.phone_number}"
@@ -53,7 +54,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
 
   def api_base_path
     # provide the environment variable when testing against sandbox : 'https://waba-sandbox.360dialog.io/v1'
-    ENV.fetch('360DIALOG_BASE_URL', 'https://waba.360dialog.io/v1')
+    ENV.fetch('360DIALOG_BASE_URL', 'https://waba-v2.360dialog.io')
   end
 
   def send_text_message(phone_number, message)
@@ -61,6 +62,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
       "#{api_base_path}/messages",
       headers: api_headers,
       body: {
+        messaging_product: 'whatsapp',
         to: phone_number,
         text: { body: message.content },
         type: 'text'
@@ -82,6 +84,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
       "#{api_base_path}/messages",
       headers: api_headers,
       body: {
+        'messaging_product' => 'whatsapp',
         'to' => phone_number,
         'type' => type,
         type.to_s => type_content
