@@ -27,7 +27,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
   def sync_templates
     # ensuring that channels with wrong provider config wouldn't keep trying to sync templates
     whatsapp_channel.mark_message_templates_updated
-    response = HTTParty.get("#{api_base_path}/configs/templates", headers: api_headers)
+    response = HTTParty.get("#{api_base_path}/v1/configs/templates", headers: api_headers)
     whatsapp_channel.update(message_templates: response['waba_templates'], message_templates_last_updated: Time.now.utc) if response.success?
   end
 
