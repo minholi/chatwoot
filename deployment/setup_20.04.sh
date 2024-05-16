@@ -60,7 +60,7 @@ while true; do
             ;;
         -i|--install)
             i=y
-            BRANCH="master"
+            BRANCH="360dialog-v2"
             break
             ;;
        -I|--Install)
@@ -339,7 +339,7 @@ function setup_chatwoot() {
   rvm install "ruby-3.2.2"
   rvm use 3.2.2 --default
 
-  git clone https://github.com/chatwoot/chatwoot.git
+  git clone https://github.com/minholi/chatwoot.git
   cd chatwoot
   git checkout "$BRANCH"
   bundle

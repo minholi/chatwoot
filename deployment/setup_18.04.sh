@@ -46,10 +46,10 @@ rvm autolibs disable
 rvm install "ruby-3.0.4"
 rvm use 3.0.4 --default
 
-git clone https://github.com/chatwoot/chatwoot.git
+git clone https://github.com/minholi/chatwoot.git
 cd chatwoot
 if [[ -z "$1" ]]; then
-  git checkout master;
+  git checkout 360dialog-v2;
 else
   git checkout $1;
 fi
