@@ -43,7 +43,7 @@ const RECORDER_CONFIG = {
     audioWorkerURL: waveWorker,
   },
   [AUDIO_FORMATS.OGG]: {
-    audioMimeType: 'audio/ogg',
+    audioMimeType: 'audio/ogg; codecs=opus',
     audioWorkerURL: encoderWorker,
   },
 };
