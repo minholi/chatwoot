@@ -1,3 +1,29 @@
+<script>
+import { mapGetters } from 'vuex';
+import { useAccount } from 'dashboard/composables/useAccount';
+
+export default {
+  setup() {
+    const { accountScopedUrl } = useAccount();
+    return {
+      accountScopedUrl,
+    };
+  },
+  computed: {
+    ...mapGetters({ globalConfig: 'globalConfig/get' }),
+    newInboxURL() {
+      return this.accountScopedUrl('settings/inboxes/new');
+    },
+    newAgentURL() {
+      return this.accountScopedUrl('settings/agents/list');
+    },
+    newLabelsURL() {
+      return this.accountScopedUrl('settings/labels/list');
+    },
+  },
+};
+</script>
+
 <template>
   <div class="onboarding-wrap">
     <div class="onboarding">
@@ -78,26 +104,7 @@
     </div>
   </div>
 </template>
-<script>
-import { mapGetters } from 'vuex';
-import accountMixin from '../../../mixins/account';
 
-export default {
-  mixins: [accountMixin],
-  computed: {
-    ...mapGetters({ globalConfig: 'globalConfig/get' }),
-    newInboxURL() {
-      return this.addAccountScoping('settings/inboxes/new');
-    },
-    newAgentURL() {
-      return this.addAccountScoping('settings/agents/list');
-    },
-    newLabelsURL() {
-      return this.addAccountScoping('settings/labels/list');
-    },
-  },
-};
-</script>
 <style lang="scss" scoped>
 .onboarding-wrap {
   display: flex;
