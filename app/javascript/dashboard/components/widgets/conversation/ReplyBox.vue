@@ -135,8 +135,7 @@ export default {
       return (
         this.inReplyTo?.id &&
         !this.isPrivate &&
-        this.inboxHasFeature(INBOX_FEATURES.REPLY_TO) &&
-        !this.is360DialogWhatsAppChannel
+        this.inboxHasFeature(INBOX_FEATURES.REPLY_TO)
       );
     },
     showRichContentEditor() {
