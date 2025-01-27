@@ -3,14 +3,13 @@ import { mapGetters } from 'vuex';
 import { useVuelidate } from '@vuelidate/core';
 import { minValue } from '@vuelidate/validators';
 import { useAlert } from 'dashboard/composables';
-import configMixin from 'shared/mixins/configMixin';
+import { useConfig } from 'dashboard/composables/useConfig';
 import SettingsSection from '../../../../../components/SettingsSection.vue';
 
 export default {
   components: {
     SettingsSection,
   },
-  mixins: [configMixin],
   props: {
     inbox: {
       type: Object,
@@ -18,7 +17,9 @@ export default {
     },
   },
   setup() {
-    return { v$: useVuelidate() };
+    const { isEnterprise } = useConfig();
+
+    return { v$: useVuelidate(), isEnterprise };
   },
   data() {
     return {
@@ -172,7 +173,7 @@ export default {
         class="max-assignment-container"
       >
         <woot-input
-          v-model.trim="maxAssignmentLimit"
+          v-model="maxAssignmentLimit"
           type="number"
           :class="{ error: v$.maxAssignmentLimit.$error }"
           :error="maxAssignmentLimitErrors"
@@ -195,8 +196,8 @@ export default {
 </template>
 
 <style scoped lang="scss">
-@import '~dashboard/assets/scss/variables';
-@import '~dashboard/assets/scss/mixins';
+@import 'dashboard/assets/scss/variables';
+@import 'dashboard/assets/scss/mixins';
 
 .max-assignment-container {
   padding-top: var(--space-slab);
