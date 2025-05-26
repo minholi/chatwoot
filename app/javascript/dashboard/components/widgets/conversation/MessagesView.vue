@@ -1,5 +1,5 @@
 <script>
-import { ref } from 'vue';
+import { ref, provide } from 'vue';
 // composable
 import { useConfig } from 'dashboard/composables/useConfig';
 import { useKeyboardEvents } from 'dashboard/composables/useKeyboardEvents';
@@ -63,6 +63,7 @@ export default {
   emits: ['contactPanelToggle'],
   setup() {
     const isPopOutReplyBox = ref(false);
+    const conversationPanelRef = ref(null);
     const { isEnterprise } = useConfig();
 
     const closePopOutReplyBox = () => {
@@ -98,6 +99,8 @@ export default {
       FEATURE_FLAGS.CHATWOOT_V4
     );
 
+    provide('contextMenuElementTarget', conversationPanelRef);
+
     return {
       isEnterprise,
       isPopOutReplyBox,
@@ -108,6 +111,7 @@ export default {
       fetchIntegrationsIfRequired,
       fetchLabelSuggestions,
       showNextBubbles,
+      conversationPanelRef,
     };
   },
   data() {
@@ -249,7 +253,7 @@ export default {
       return this.$t('CONVERSATION.CANNOT_REPLY');
     },
     replyWindowLink() {
-      if (this.isAFacebookInbox || this.isAInstagramChannel) {
+      if (this.isAFacebookInbox || this.isAnInstagramChannel) {
         return REPLY_POLICY.FACEBOOK;
       }
       if (this.isAWhatsAppCloudChannel) {
@@ -264,7 +268,7 @@ export default {
       if (
         this.isAWhatsAppChannel ||
         this.isAFacebookInbox ||
-        this.isAInstagramChannel
+        this.isAnInstagramChannel
       ) {
         return this.$t('CONVERSATION.24_HOURS_WINDOW');
       }
@@ -539,6 +543,7 @@ export default {
     </div>
     <NextMessageList
       v-if="showNextBubbles"
+      ref="conversationPanelRef"
       class="conversation-panel"
       :current-user-id="currentUserId"
       :first-unread-id="unReadMessages[0]?.id"
@@ -570,7 +575,7 @@ export default {
         />
       </template>
     </NextMessageList>
-    <ul v-else class="conversation-panel">
+    <ul v-else ref="conversationPanelRef" class="conversation-panel">
       <transition name="slide-up">
         <!-- eslint-disable-next-line vue/require-toggle-inside-transition -->
         <li class="min-h-[4rem]">
