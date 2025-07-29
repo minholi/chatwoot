@@ -227,7 +227,8 @@
           "WHATSAPP_CLOUD": "WhatsApp Cloud",
           "WHATSAPP_CLOUD_DESC": "Quick setup through Meta",
           "TWILIO_DESC": "Connect via Twilio credentials",
-          "360_DIALOG": "360Dialog"
+          "360_DIALOG": "360Dialog",
+          "360_DIALOG_DESC": "Connect via 360Dialog credentials"
         },
         "SELECT_PROVIDER": {
           "TITLE": "Select your API provider",
