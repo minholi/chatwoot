@@ -92,7 +92,7 @@ export default {
       return this.tabs[this.selectedTabIndex]?.key;
     },
     shouldShowWhatsAppConfiguration() {
-      return this.isAWhatsAppCloudChannel;
+      return this.isAWhatsAppCloudChannel || this.is360DialogWhatsAppChannel;
     },
     whatsAppAPIProviderName() {
       if (this.isAWhatsAppCloudChannel) {
