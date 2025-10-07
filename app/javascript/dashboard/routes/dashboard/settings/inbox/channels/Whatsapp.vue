@@ -48,8 +48,8 @@ const availableProviders = computed(() => [
     icon: 'i-woot-twilio',
   },
   {
-    value: PROVIDER_TYPES.THREE_SIXTY_DIALOG,
-    label: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.360_DIALOG'),
+    key: PROVIDER_TYPES.THREE_SIXTY_DIALOG,
+    title: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.360_DIALOG'),
     description: t('INBOX_MGMT.ADD.WHATSAPP.PROVIDERS.360_DIALOG_DESC'),
     icon: '/assets/images/dashboard/channels/whatsapp.png',
   },
