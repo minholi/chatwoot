@@ -9,7 +9,13 @@ class Whatsapp::IncomingMessageWhatsappCloudService < Whatsapp::IncomingMessageB
   end
 
   def download_attachment_file(attachment_payload)
-    url_response = HTTParty.get(inbox.channel.media_url(attachment_payload[:id]), headers: inbox.channel.api_headers)
+    url_response = HTTParty.get(
+      inbox.channel.media_url(
+        attachment_payload[:id],
+        inbox.channel.provider_config['phone_number_id']
+      ),
+      headers: inbox.channel.api_headers
+    )
     download_url = url_response.parsed_response['url']
     # Changes media download url as described in https://docs.360dialog.com/docs/waba-messaging/media/upload-retrieve-or-delete-media#retrieve-media-url
     download_url.gsub!('https://lookaside.fbsbx.com', 'https://waba-v2.360dialog.io') if inbox.channel.provider == 'default'
