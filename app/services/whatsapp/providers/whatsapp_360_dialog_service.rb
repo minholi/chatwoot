@@ -47,7 +47,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
     { 'D360-API-KEY' => whatsapp_channel.provider_config['api_key'], 'Content-Type' => 'application/json' }
   end
 
-  def media_url(media_id)
+  def media_url(media_id, phone_number_id = nil)
     "#{api_base_path}/#{media_id}"
   end
 
