@@ -16,9 +16,6 @@ const modalRef = ref(null);
 
 const currentYear = 2025;
 
-const isACustomBrandedInstance =
-  getters['globalConfig/isACustomBrandedInstance'];
-
 const bannerClosedKey = computed(() => {
   const accountId = getters.getCurrentAccountId.value;
   return `yir_closed_${accountId}_${currentYear}`;
@@ -29,7 +26,7 @@ const isBannerClosed = computed(() => {
 });
 
 const shouldShowBanner = computed(
-  () => !isBannerClosed.value && !isACustomBrandedInstance.value
+  () => !isBannerClosed.value
 );
 
 const openModal = () => {
