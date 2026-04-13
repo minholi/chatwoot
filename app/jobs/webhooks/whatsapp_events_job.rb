@@ -2,6 +2,7 @@ class Webhooks::WhatsappEventsJob < ApplicationJob
   queue_as :low
 
   def perform(params = {})
+    params = params.with_indifferent_access
     channel = find_channel_from_whatsapp_business_payload(params)
 
     if channel_is_inactive?(channel)
