@@ -252,7 +252,7 @@ export default {
       }
 
       if (
-        this.isAWhatsAppCloudChannel &&
+        (this.isAWhatsAppCloudChannel || this.is360DialogWhatsAppChannel) &&
         this.isFeatureEnabledonAccount(
           this.accountId,
           FEATURE_FLAGS.CHANNEL_VOICE
