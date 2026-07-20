@@ -141,3 +141,5 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
     process_response(response, message)
   end
 end
+
+Whatsapp::Providers::Whatsapp360DialogService.prepend_mod_with('Whatsapp::Providers::Whatsapp360DialogService')
