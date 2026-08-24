@@ -3,6 +3,7 @@
 # Table name: channel_whatsapp
 #
 #  id                             :bigint           not null, primary key
+#  business_management_token      :text
 #  message_templates              :jsonb
 #  message_templates_last_updated :datetime
 #  phone_number                   :string           not null
@@ -27,6 +28,7 @@ class Channel::Whatsapp < ApplicationRecord
 
   self.table_name = 'channel_whatsapp'
   EDITABLE_ATTRS = [:phone_number, :provider, { provider_config: {} }].freeze
+  encrypts :business_management_token if Chatwoot.encryption_configured?
 
   # default at the moment is 360dialog lets change later.
   PROVIDERS = %w[default whatsapp_cloud].freeze
@@ -70,6 +72,22 @@ class Channel::Whatsapp < ApplicationRecord
     end
   end
 
+  def template_access_token
+    return provider_config['api_key'] unless ChatwootApp.chatwoot_cloud? && provider_config['source'] == 'embedded_signup'
+
+    business_management_token.presence || provider_config['api_key']
+  end
+
+  def serializable_hash(options = nil)
+    super.except('business_management_token')
+  end
+
+  # Enables voice: turns calling on at Meta (idempotent), then re-registers webhooks
+  # with the in-memory calling_enabled flag so the `calls` field is subscribed. The
+  # flag is persisted only after registration succeeds, so a webhook failure can't
+  # leave the inbox reporting voice_enabled? while the WABA isn't subscribed to calls.
+  # Saved with validate: false to skip validate_provider_config's remote credential
+  # re-check, which could spuriously fail and desync the flag from Meta.
   def enable_voice_calling!
     raise 'WhatsApp calling requires a supported inbox' unless voice_calling_supported?
     raise 'WhatsApp calling requires the channel_voice feature' unless account.feature_enabled?('channel_voice')
@@ -158,3 +176,5 @@ class Channel::Whatsapp < ApplicationRecord
     provider == 'whatsapp_cloud' && provider_config['source'] != 'embedded_signup'
   end
 end
+
+Channel::Whatsapp.prepend_mod_with('Channel::Whatsapp')
