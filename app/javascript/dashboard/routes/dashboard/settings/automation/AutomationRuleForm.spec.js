@@ -227,6 +227,22 @@ describe('AutomationRuleForm', () => {
   it('saves when the execution window is valid', async () => {
     const automation = {
       ...buildAutomation({ delayed: true }),
+      conditions: [
+        {
+          attribute_key: 'message_type',
+          filter_operator: 'equal_to',
+          values: 'outgoing',
+          query_operator: 'and',
+          custom_attribute_type: '',
+        },
+        {
+          attribute_key: 'priority',
+          filter_operator: 'equal_to',
+          values: 'high',
+          query_operator: null,
+          custom_attribute_type: '',
+        },
+      ],
       actions: [{ action_name: 'mute_conversation', action_params: [] }],
     };
     const wrapper = mountComponent({ mode: 'edit', automation });
