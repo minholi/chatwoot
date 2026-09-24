@@ -2,6 +2,7 @@ import { h, nextTick } from 'vue';
 import { shallowMount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import NextSelect from 'dashboard/components-next/select/Select.vue';
 import ConditionRow from 'dashboard/components-next/filter/ConditionRow.vue';
 import FilterSelect from 'dashboard/components-next/filter/inputs/FilterSelect.vue';
 import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue';
@@ -589,5 +590,51 @@ describe('AutomationWaitCondition', () => {
     expect(wrapper.vm.validate()).toBe(false);
     expect(validations[0]).toHaveBeenCalledOnce();
     expect(validations[1]).toHaveBeenCalledOnce();
+  });
+
+  it('enables the execution window and emits the selected bounds', async () => {
+    const wrapper = mountComponent();
+    await nextTick();
+
+    const checkbox = wrapper.find('input[type="checkbox"]');
+    expect(checkbox.element.checked).toBe(false);
+
+    await checkbox.setValue(true);
+    expect(wrapper.emitted('update:windowEnabled').at(-1)[0]).toBe(true);
+
+    const [startSelect, endSelect] = wrapper.findAllComponents(NextSelect);
+    startSelect.vm.$emit('update:modelValue', 9 * 60);
+    endSelect.vm.$emit('update:modelValue', 18 * 60);
+    await nextTick();
+
+    expect(wrapper.emitted('update:windowStart').at(-1)[0]).toBe(9 * 60);
+    expect(wrapper.emitted('update:windowEnd').at(-1)[0]).toBe(18 * 60);
+  });
+
+  it('offers same-day window bounds only', async () => {
+    const wrapper = mountComponent({ windowEnabled: true });
+    await nextTick();
+
+    const [startSelect, endSelect] = wrapper.findAllComponents(NextSelect);
+    const startValues = startSelect.props('options').map(({ value }) => value);
+    const endValues = endSelect.props('options').map(({ value }) => value);
+
+    expect(startValues[0]).toBe(0);
+    expect(startValues).not.toContain(1439);
+    expect(endValues).not.toContain(0);
+    expect(endValues.at(-1)).toBe(1439);
+  });
+
+  it('shows the window error and the timezone note when the window is on', async () => {
+    const wrapper = mountComponent({
+      windowEnabled: true,
+      hasWindowError: true,
+    });
+    await nextTick();
+
+    expect(wrapper.text()).toContain('AUTOMATION.ADD.FORM.WAIT.WINDOW.ERROR');
+    expect(wrapper.text()).toContain(
+      'AUTOMATION.ADD.FORM.WAIT.WINDOW.TIMEZONE_NOTE'
+    );
   });
 });

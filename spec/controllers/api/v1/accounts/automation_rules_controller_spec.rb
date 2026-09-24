@@ -532,6 +532,20 @@ RSpec.describe 'Api::V1::Accounts::AutomationRulesController', type: :request do
         expect(automation_rule.reload).not_to be_active
       end
 
+      it 'persists and serializes the execution window' do
+        post "/api/v1/accounts/#{account.id}/automation_rules",
+             headers: administrator.create_new_auth_token,
+             params: delayed_rule_params.merge(execution_window_start_minutes: 9 * 60,
+                                               execution_window_end_minutes: 18 * 60)
+
+        expect(response).to have_http_status(:success)
+        body = JSON.parse(response.body, symbolize_names: true)
+        expect(body[:execution_window_start_minutes]).to eq(9 * 60)
+        expect(body[:execution_window_end_minutes]).to eq(18 * 60)
+        expect(account.automation_rules.last.execution_window_start_minutes).to eq(9 * 60)
+        expect(account.automation_rules.last.execution_window_end_minutes).to eq(18 * 60)
+      end
+
       it 'copies execution_delay on clone' do
         automation_rule = create(:automation_rule, account: account, execution_delay: 240)
 
@@ -540,6 +554,19 @@ RSpec.describe 'Api::V1::Accounts::AutomationRulesController', type: :request do
 
         expect(response).to have_http_status(:success)
         expect(account.automation_rules.last.execution_delay).to eq(240)
+      end
+
+      it 'copies the execution window on clone' do
+        automation_rule = create(:automation_rule, account: account, execution_delay: 240,
+                                                   execution_window_start_minutes: 9 * 60,
+                                                   execution_window_end_minutes: 18 * 60)
+
+        post "/api/v1/accounts/#{account.id}/automation_rules/#{automation_rule.id}/clone",
+             headers: administrator.create_new_auth_token
+
+        expect(response).to have_http_status(:success)
+        expect(account.automation_rules.last.execution_window_start_minutes).to eq(9 * 60)
+        expect(account.automation_rules.last.execution_window_end_minutes).to eq(18 * 60)
       end
     end
 
@@ -560,6 +587,18 @@ RSpec.describe 'Api::V1::Accounts::AutomationRulesController', type: :request do
 
         expect(response).to have_http_status(:success)
         expect(account.automation_rules.last.execution_delay).to be_nil
+      end
+
+      it 'rejects a payload carrying only an execution window with 422' do
+        post "/api/v1/accounts/#{account.id}/automation_rules",
+             headers: administrator.create_new_auth_token,
+             params: delayed_rule_params.except(:execution_delay)
+                                        .merge(execution_window_start_minutes: 9 * 60,
+                                               execution_window_end_minutes: 18 * 60)
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq('Delayed automations are not enabled for this account.')
+        expect(account.automation_rules.count).to eq(0)
       end
 
       it 'rejects cloning an existing delayed rule instead of turning it into an instant one' do

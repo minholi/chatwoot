@@ -36,7 +36,14 @@ const triggerStub = {
 };
 
 const waitConditionStub = {
-  props: ['isSavedWait'],
+  props: [
+    'isSavedWait',
+    'hasError',
+    'hasWindowError',
+    'windowEnabled',
+    'windowStart',
+    'windowEnd',
+  ],
   template: '<div />',
   methods: {
     resetValidation: vi.fn(),
@@ -184,5 +191,54 @@ describe('AutomationRuleForm', () => {
     expect(
       wrapper.findComponent(AutomationWaitCondition).props('isSavedWait')
     ).toBe(true);
+  });
+
+  it('hydrates the execution window and clears it for instant rules', async () => {
+    const automation = buildAutomation({ delayed: true });
+    const wrapper = mountComponent({ mode: 'edit', automation });
+    wrapper.vm.open(60, 9 * 60, 18 * 60);
+    await nextTick();
+
+    expect(automation.execution_window_start_minutes).toBe(9 * 60);
+    expect(automation.execution_window_end_minutes).toBe(18 * 60);
+
+    await selectRunType(wrapper, false);
+    expect(automation.execution_window_start_minutes).toBeNull();
+    expect(automation.execution_window_end_minutes).toBeNull();
+  });
+
+  it('flags an invalid execution window and blocks saving', async () => {
+    const automation = {
+      ...buildAutomation({ delayed: true }),
+      actions: [{ action_name: 'mute_conversation', action_params: [] }],
+    };
+    const wrapper = mountComponent({ mode: 'edit', automation });
+    wrapper.vm.open(60, 18 * 60, 9 * 60);
+    await nextTick();
+
+    await wrapper.findAll('button')[1].trigger('click');
+
+    expect(wrapper.emitted('save')).toBeUndefined();
+    expect(
+      wrapper.findComponent(AutomationWaitCondition).props('hasWindowError')
+    ).toBe(true);
+  });
+
+  it('saves when the execution window is valid', async () => {
+    const automation = {
+      ...buildAutomation({ delayed: true }),
+      actions: [{ action_name: 'mute_conversation', action_params: [] }],
+    };
+    const wrapper = mountComponent({ mode: 'edit', automation });
+    wrapper.vm.open(60, 9 * 60, 18 * 60);
+    await nextTick();
+
+    await wrapper.findAll('button')[1].trigger('click');
+
+    expect(wrapper.emitted('save')).toHaveLength(1);
+    expect(wrapper.emitted('save')[0][0]).toMatchObject({
+      execution_window_start_minutes: 9 * 60,
+      execution_window_end_minutes: 18 * 60,
+    });
   });
 });

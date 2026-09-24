@@ -11,6 +11,8 @@ const START_VALUE = {
   description: null,
   event_name: 'conversation_created',
   execution_delay: null,
+  execution_window_start_minutes: null,
+  execution_window_end_minutes: null,
   conditions: [
     {
       attribute_key: 'status',
@@ -45,10 +47,14 @@ const {
   manifestCustomAttributes,
 } = useAutomation(START_VALUE);
 
-const open = (executionDelay = null) => {
+const open = (
+  executionDelay = null,
+  windowStartMinutes = null,
+  windowEndMinutes = null
+) => {
   automation.value = structuredClone(START_VALUE);
   manifestCustomAttributes();
-  formRef.value?.open(executionDelay);
+  formRef.value?.open(executionDelay, windowStartMinutes, windowEndMinutes);
 };
 const close = () => formRef.value?.close();
 

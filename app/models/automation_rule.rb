@@ -2,17 +2,19 @@
 #
 # Table name: automation_rules
 #
-#  id              :bigint           not null, primary key
-#  actions         :jsonb            not null
-#  active          :boolean          default(TRUE), not null
-#  conditions      :jsonb            not null
-#  description     :text
-#  event_name      :string           not null
-#  execution_delay :integer
-#  name            :string           not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  account_id      :bigint           not null
+#  id                             :bigint           not null, primary key
+#  actions                        :jsonb            not null
+#  active                         :boolean          default(TRUE), not null
+#  conditions                     :jsonb            not null
+#  description                    :text
+#  event_name                     :string           not null
+#  execution_delay                :integer
+#  execution_window_end_minutes   :integer
+#  execution_window_start_minutes :integer
+#  name                           :string           not null
+#  created_at                     :datetime         not null
+#  updated_at                     :datetime         not null
+#  account_id                     :bigint           not null
 #
 # Indexes
 #
@@ -23,6 +25,10 @@ class AutomationRule < ApplicationRecord
   include Reauthorizable
 
   EXECUTION_DELAY_RANGE = (10..43_200) # minutes: 10 min to 30 days
+  # Allowed execution window, as minutes since midnight in the inbox's timezone. Same-day only:
+  # the start must come before the end, so a blocked overnight period is expressed by its
+  # complement (e.g. allow 06:00-22:00 instead of blocking 22:00-06:00).
+  EXECUTION_WINDOW_MINUTES_RANGE = (0...1440)
   # Conversation-level delayed rules key their episode on status; only status and attributes
   # that never change after the delay (inbox) are safe to also filter on.
   DELAYED_CONVERSATION_ATTRIBUTES = %w[status inbox_id].freeze
@@ -37,8 +43,13 @@ class AutomationRule < ApplicationRecord
   validate :query_operator_value
   validates :account_id, presence: true
   validates :execution_delay, numericality: { only_integer: true, in: EXECUTION_DELAY_RANGE }, allow_nil: true
+  validates :execution_window_start_minutes, numericality: { only_integer: true, in: EXECUTION_WINDOW_MINUTES_RANGE }, allow_nil: true
+  validates :execution_window_end_minutes, numericality: { only_integer: true, in: EXECUTION_WINDOW_MINUTES_RANGE }, allow_nil: true
   validate :execution_delay_supported_conditions
   validate :execution_delay_supported_event
+  validate :execution_window_format
+  validate :execution_window_order
+  validate :execution_window_supported
 
   after_update_commit :reauthorized!, if: -> { saved_change_to_conditions? }
   # Discard rows armed under the old definition; they re-arm on the next matching event.
@@ -72,7 +83,55 @@ class AutomationRule < ApplicationRecord
     end
   end
 
+  def execution_window?
+    execution_window_start_minutes.present? && execution_window_end_minutes.present?
+  end
+
+  # The window is evaluated in the inbox's timezone and is inclusive of the start, exclusive of
+  # the end, so a 09:00-18:00 window stops accepting runs at 18:00 sharp.
+  def within_execution_window?(time_zone)
+    return true unless execution_window?
+
+    minutes = minutes_since_midnight(Time.current.in_time_zone(time_zone))
+    minutes >= execution_window_start_minutes && minutes < execution_window_end_minutes
+  end
+
+  # Only called when outside the window: today's start when it is still ahead, otherwise tomorrow's.
+  def next_execution_window_start(time_zone)
+    zone = Time.find_zone!(time_zone)
+    now = Time.current.in_time_zone(zone)
+    date = now.to_date
+    date += 1.day if minutes_since_midnight(now) >= execution_window_start_minutes
+    zone.local(date.year, date.month, date.day, execution_window_start_minutes / 60, execution_window_start_minutes % 60)
+  end
+
   private
+
+  def minutes_since_midnight(time)
+    (time.hour * 60) + time.min
+  end
+
+  def execution_window_format
+    return if execution_window_start_minutes.blank? && execution_window_end_minutes.blank?
+    return if execution_window_start_minutes.present? && execution_window_end_minutes.present?
+
+    errors.add(:execution_window_start_minutes, 'must be set together with the end time.')
+  end
+
+  def execution_window_order
+    return unless execution_window?
+    return unless execution_window_start_minutes.is_a?(Integer) && execution_window_end_minutes.is_a?(Integer)
+    return if execution_window_start_minutes < execution_window_end_minutes
+
+    errors.add(:execution_window_end_minutes, 'must be after the start time.')
+  end
+
+  # A window without a delay would gate instant rules, which always run on the matching event.
+  def execution_window_supported
+    return if execution_window_start_minutes.blank? || execution_delay.present?
+
+    errors.add(:execution_window_start_minutes, 'can only be used with an execution delay.')
+  end
 
   def json_conditions_format
     return if conditions.blank?
@@ -129,7 +188,8 @@ class AutomationRule < ApplicationRecord
   # run the actions the admin turned it off to stop.
   def execution_config_changed?
     saved_change_to_active? || saved_change_to_execution_delay? || saved_change_to_event_name? ||
-      saved_change_to_conditions? || saved_change_to_actions?
+      saved_change_to_conditions? || saved_change_to_actions? || saved_change_to_execution_window_start_minutes? ||
+      saved_change_to_execution_window_end_minutes?
   end
 
   def discard_stale_pending_executions
