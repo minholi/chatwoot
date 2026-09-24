@@ -19,6 +19,8 @@ import {
   AUTOMATION_RULE_EVENTS,
   AUTOMATION_ACTION_TYPES,
   DEFAULT_DELAY_MINUTES,
+  DEFAULT_WINDOW_START_MINUTES,
+  DEFAULT_WINDOW_END_MINUTES,
 } from './constants';
 import AutomationRunTypeSelector from './components/AutomationRunTypeSelector.vue';
 import AutomationWaitCondition from './components/AutomationWaitCondition.vue';
@@ -103,6 +105,9 @@ const isDelayed = ref(false);
 const isSavedWait = ref(false);
 const delayMinutes = ref(DEFAULT_DELAY_MINUTES);
 const delayUnit = ref(DURATION_UNITS.HOURS);
+const isWindowEnabled = ref(false);
+const windowStart = ref(DEFAULT_WINDOW_START_MINUTES);
+const windowEnd = ref(DEFAULT_WINDOW_END_MINUTES);
 const instantTriggerDraft = shallowRef(null);
 const waitTriggerDraft = shallowRef(null);
 const isSyncingDelayState = ref(false);
@@ -111,6 +116,13 @@ const waitSectionKey = ref(0);
 
 const executionDelayInvalid = computed(
   () => isDelayed.value && !Number.isFinite(delayMinutes.value)
+);
+
+const executionWindowInvalid = computed(
+  () =>
+    isDelayed.value &&
+    isWindowEnabled.value &&
+    !(windowStart.value < windowEnd.value)
 );
 
 const statusOptions = computed(() =>
@@ -141,9 +153,13 @@ const restoreTriggerDraft = draft => {
   automation.value.conditions = cloneConditions(draft.conditions);
 };
 
-// Show the wait in the largest whole unit (240 min → 4 hours). The delay is passed in by open()
-// rather than read from `automation`, whose model prop only settles a tick later.
-const syncDelayState = executionDelay => {
+// Show the wait in the largest whole unit (240 min → 4 hours). The wait values are passed in by
+// open() rather than read from `automation`, whose model prop only settles a tick later.
+const syncDelayState = (
+  executionDelay,
+  windowStartMinutes = null,
+  windowEndMinutes = null
+) => {
   isSyncingDelayState.value = true;
   isDelayed.value = Boolean(executionDelay);
   isSyncingDelayState.value = false;
@@ -153,6 +169,14 @@ const syncDelayState = executionDelay => {
   else if (minutes % 60 === 0) delayUnit.value = DURATION_UNITS.HOURS;
   else delayUnit.value = DURATION_UNITS.MINUTES;
   delayMinutes.value = minutes;
+
+  // Midnight (0) is a valid start, so presence is checked against null, not truthiness.
+  const hasWindow = windowStartMinutes != null && windowEndMinutes != null;
+  isWindowEnabled.value = hasWindow;
+  windowStart.value = hasWindow
+    ? windowStartMinutes
+    : DEFAULT_WINDOW_START_MINUTES;
+  windowEnd.value = hasWindow ? windowEndMinutes : DEFAULT_WINDOW_END_MINUTES;
   waitSectionKey.value += 1;
 
   // Drafts are captured when the run type actually changes, so they start empty: seeding them
@@ -180,12 +204,22 @@ watch(
   { flush: 'sync' }
 );
 
-watch([isDelayed, delayMinutes], () => {
-  if (!automation.value || !allowsDelayedExecution.value) return;
-  automation.value.execution_delay = isDelayed.value
-    ? delayMinutes.value
-    : null;
-});
+watch(
+  [isDelayed, delayMinutes, isWindowEnabled, windowStart, windowEnd],
+  () => {
+    if (!automation.value || !allowsDelayedExecution.value) return;
+    automation.value.execution_delay = isDelayed.value
+      ? delayMinutes.value
+      : null;
+    const windowEnabled = isDelayed.value && isWindowEnabled.value;
+    automation.value.execution_window_start_minutes = windowEnabled
+      ? windowStart.value
+      : null;
+    automation.value.execution_window_end_minutes = windowEnabled
+      ? windowEnd.value
+      : null;
+  }
+);
 
 const titleKey = computed(() =>
   isEditMode.value ? 'AUTOMATION.EDIT.TITLE' : 'AUTOMATION.ADD.TITLE'
@@ -319,9 +353,13 @@ const syncCustomAttributeTypes = () => {
   });
 };
 
-const open = (executionDelay = null) => {
+const open = (
+  executionDelay = null,
+  windowStartMinutes = null,
+  windowEndMinutes = null
+) => {
   resetValidation();
-  syncDelayState(executionDelay);
+  syncDelayState(executionDelay, windowStartMinutes, windowEndMinutes);
   panelRef.value?.open();
 };
 
@@ -336,6 +374,9 @@ const emitSaveAutomation = () => {
   errors.value = validateAutomation(automation.value);
   if (allowsDelayedExecution.value && executionDelayInvalid.value) {
     errors.value.execution_delay = true;
+  }
+  if (allowsDelayedExecution.value && executionWindowInvalid.value) {
+    errors.value.execution_window = true;
   }
   if (Object.keys(errors.value).length === 0 && conditionsValid) {
     const payload = generateAutomationPayload(automation.value);
@@ -383,12 +424,16 @@ defineExpose({ open, close });
         v-model:conditions="automation.conditions"
         v-model:delay="delayMinutes"
         v-model:unit="delayUnit"
+        v-model:window-enabled="isWindowEnabled"
+        v-model:window-start="windowStart"
+        v-model:window-end="windowEnd"
         :status-options="statusOptions"
         :inbox-options="inboxOptions"
         :filter-types="filterTypes"
         :remove-filter="removeFilter"
         :is-saved-wait="isSavedWait"
         :has-error="Boolean(errors.execution_delay)"
+        :has-window-error="Boolean(errors.execution_window)"
       />
       <AutomationInstantTrigger
         v-else

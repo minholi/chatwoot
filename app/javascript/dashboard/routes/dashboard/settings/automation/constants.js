@@ -811,6 +811,11 @@ export const DEFAULT_DELAY_MINUTES = 240; // 4 hours
 export const MIN_DELAY_MINUTES = 10;
 export const MAX_DELAY_MINUTES = 43200; // 30 days
 export const DEFAULT_TRIGGER_STATUS = 'pending';
+export const DEFAULT_WINDOW_START_MINUTES = 9 * 60; // 09:00
+export const DEFAULT_WINDOW_END_MINUTES = 18 * 60; // 18:00
+export const WINDOW_STEP_MINUTES = 30;
+// 11:59 PM, the last selectable end; a window is always same-day (start < end).
+export const WINDOW_END_OF_DAY_MINUTES = 1439;
 
 // A delayed rule is expressed as one meaningful trigger instead of a raw event + conditions. Each
 // trigger maps to the automation's event_name plus a preset condition: message_type for the two

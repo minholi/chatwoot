@@ -7,13 +7,17 @@ import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue
 import DurationInput from 'dashboard/components-next/input/DurationInput.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import NextSelect from 'dashboard/components-next/select/Select.vue';
 import { DURATION_UNITS } from 'dashboard/components-next/input/constants';
+import { getTime } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 import {
   DELAYED_TRIGGERS,
   DEFAULT_TRIGGER,
   DEFAULT_TRIGGER_STATUS,
   MIN_DELAY_MINUTES,
   MAX_DELAY_MINUTES,
+  WINDOW_STEP_MINUTES,
+  WINDOW_END_OF_DAY_MINUTES,
 } from '../constants';
 
 const props = defineProps({
@@ -37,6 +41,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  hasWindowError: {
+    type: Boolean,
+    default: false,
+  },
   isSavedWait: {
     type: Boolean,
     default: false,
@@ -47,6 +55,12 @@ const eventName = defineModel('eventName', { type: String, required: true });
 const conditions = defineModel('conditions', { type: Array, required: true });
 const delay = defineModel('delay', { type: Number, default: null });
 const unit = defineModel('unit', { type: String, required: true });
+const windowEnabled = defineModel('windowEnabled', {
+  type: Boolean,
+  default: false,
+});
+const windowStart = defineModel('windowStart', { type: Number, default: null });
+const windowEnd = defineModel('windowEnd', { type: Number, default: null });
 
 const { t } = useI18n();
 
@@ -97,6 +111,23 @@ const MINUTES_PER_UNIT = {
   [DURATION_UNITS.HOURS]: 60,
   [DURATION_UNITS.DAYS]: 24 * 60,
 };
+
+// Half-hour slots; the end list drops midnight because a same-day window always ends after it starts.
+const TIME_OPTIONS = [
+  ...Array.from(
+    { length: 1440 / WINDOW_STEP_MINUTES },
+    (_, index) => index * WINDOW_STEP_MINUTES
+  ),
+  WINDOW_END_OF_DAY_MINUTES,
+].map(minutes => ({
+  value: minutes,
+  label: getTime(Math.floor(minutes / 60), minutes % 60),
+}));
+
+const windowStartOptions = TIME_OPTIONS.filter(
+  option => option.value < WINDOW_END_OF_DAY_MINUTES
+);
+const windowEndOptions = TIME_OPTIONS.filter(option => option.value > 0);
 
 // The input only shows whole units, so the wait has to be at least one of them: without this,
 // switching 4 hours to days shows 0 days while the rule keeps the 10 minute minimum.
@@ -420,6 +451,40 @@ defineExpose({ validate, resetValidation });
             </span>
             <MultiSelect v-model="triggerInboxes" :options="inboxOptions" />
           </div>
+          <div class="flex items-center gap-3 min-h-8">
+            <span class="text-sm w-20 shrink-0 text-n-slate-11">
+              {{ $t('AUTOMATION.ADD.FORM.WAIT.WINDOW.LABEL') }}
+            </span>
+            <div class="flex flex-col gap-1.5 min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <label
+                  class="flex items-center gap-2 mb-0 text-sm text-n-slate-12"
+                >
+                  <input
+                    v-model="windowEnabled"
+                    type="checkbox"
+                    class="m-0"
+                    :aria-label="$t('AUTOMATION.ADD.FORM.WAIT.WINDOW.ENABLE')"
+                  />
+                  {{ $t('AUTOMATION.ADD.FORM.WAIT.WINDOW.ENABLE') }}
+                </label>
+                <NextSelect
+                  v-model="windowStart"
+                  :options="windowStartOptions"
+                  :disabled="!windowEnabled"
+                />
+                <Icon icon="i-lucide-minus size-4 text-n-slate-11" />
+                <NextSelect
+                  v-model="windowEnd"
+                  :options="windowEndOptions"
+                  :disabled="!windowEnabled"
+                />
+              </div>
+              <span v-if="hasWindowError" class="text-xs text-n-ruby-9">
+                {{ $t('AUTOMATION.ADD.FORM.WAIT.WINDOW.ERROR') }}
+              </span>
+            </div>
+          </div>
         </div>
         <aside
           class="flex gap-2 p-3 min-w-0 rounded-xl bg-n-alpha-1 md:self-start"
@@ -427,6 +492,9 @@ defineExpose({ validate, resetValidation });
           <Icon icon="i-lucide-info" class="mt-0.5 shrink-0 text-n-slate-10" />
           <div class="flex flex-col min-w-0 gap-2">
             <p class="mb-0 text-xs text-n-slate-11">{{ explanation }}</p>
+            <p v-if="windowEnabled" class="mb-0 text-xs text-n-slate-11">
+              {{ $t('AUTOMATION.ADD.FORM.WAIT.WINDOW.TIMEZONE_NOTE') }}
+            </p>
             <p class="mb-0 text-xs text-n-slate-11">
               {{ $t('AUTOMATION.ADD.FORM.WAIT.FOOTNOTE') }}
             </p>

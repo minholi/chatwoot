@@ -232,6 +232,123 @@ RSpec.describe AutomationRule do
     end
   end
 
+  describe 'execution_window validations' do
+    let(:rule) { build(:automation_rule, account: create(:account), execution_delay: 60) }
+
+    it 'allows nil (no window)' do
+      expect(rule).to be_valid
+    end
+
+    it 'allows a same-day window' do
+      rule.execution_window_start_minutes = 9 * 60
+      rule.execution_window_end_minutes = 18 * 60
+      expect(rule).to be_valid
+    end
+
+    it 'allows a window starting at midnight' do
+      rule.execution_window_start_minutes = 0
+      rule.execution_window_end_minutes = 6 * 60
+      expect(rule).to be_valid
+    end
+
+    it 'rejects a window with only the start time' do
+      rule.execution_window_start_minutes = 9 * 60
+      expect(rule).not_to be_valid
+      expect(rule.errors[:execution_window_start_minutes]).to include('must be set together with the end time.')
+    end
+
+    it 'rejects a window with only the end time' do
+      rule.execution_window_end_minutes = 18 * 60
+      expect(rule).not_to be_valid
+      expect(rule.errors[:execution_window_start_minutes]).to include('must be set together with the end time.')
+    end
+
+    it 'rejects a window whose end is not after its start' do
+      rule.execution_window_start_minutes = 18 * 60
+      rule.execution_window_end_minutes = 9 * 60
+      expect(rule).not_to be_valid
+      expect(rule.errors[:execution_window_end_minutes]).to include('must be after the start time.')
+    end
+
+    it 'rejects an equal start and end' do
+      rule.execution_window_start_minutes = 9 * 60
+      rule.execution_window_end_minutes = 9 * 60
+      expect(rule).not_to be_valid
+      expect(rule.errors[:execution_window_end_minutes]).to include('must be after the start time.')
+    end
+
+    it 'rejects out-of-range minutes' do
+      rule.execution_window_start_minutes = 1440
+      rule.execution_window_end_minutes = 1500
+      expect(rule).not_to be_valid
+      expect(rule.errors[:execution_window_start_minutes]).to be_present
+      expect(rule.errors[:execution_window_end_minutes]).to be_present
+    end
+
+    it 'rejects a window without an execution delay' do
+      rule.execution_delay = nil
+      rule.execution_window_start_minutes = 9 * 60
+      rule.execution_window_end_minutes = 18 * 60
+      expect(rule).not_to be_valid
+      expect(rule.errors[:execution_window_start_minutes]).to include('can only be used with an execution delay.')
+    end
+  end
+
+  describe 'execution window evaluation' do
+    let(:rule) do
+      build(:automation_rule, account: create(:account), execution_delay: 60,
+                              execution_window_start_minutes: 9 * 60, execution_window_end_minutes: 18 * 60)
+    end
+
+    it 'allows any time when no window is set' do
+      rule.execution_window_start_minutes = nil
+      rule.execution_window_end_minutes = nil
+
+      travel_to(Time.utc(2026, 9, 24, 3, 0)) do
+        expect(rule.within_execution_window?('UTC')).to be true
+      end
+    end
+
+    it 'accepts the start minute and rejects the end minute' do
+      travel_to(Time.utc(2026, 9, 24, 9, 0)) do
+        expect(rule.within_execution_window?('UTC')).to be true
+      end
+      travel_to(Time.utc(2026, 9, 24, 17, 59)) do
+        expect(rule.within_execution_window?('UTC')).to be true
+      end
+      travel_to(Time.utc(2026, 9, 24, 18, 0)) do
+        expect(rule.within_execution_window?('UTC')).to be false
+      end
+    end
+
+    it 'evaluates the window in the given timezone' do
+      # 12:30 UTC is 09:30 in São Paulo, inside the 09:00-18:00 window.
+      travel_to(Time.utc(2026, 9, 24, 12, 30)) do
+        expect(rule.within_execution_window?('America/Sao_Paulo')).to be true
+      end
+    end
+
+    it 'returns the same day opening when it is still ahead' do
+      travel_to(Time.utc(2026, 9, 24, 6, 0)) do
+        expect(rule.next_execution_window_start('UTC')).to eq(Time.utc(2026, 9, 24, 9, 0))
+      end
+    end
+
+    it 'returns the next day opening when the window already closed' do
+      travel_to(Time.utc(2026, 9, 24, 20, 0)) do
+        expect(rule.next_execution_window_start('UTC')).to eq(Time.utc(2026, 9, 25, 9, 0))
+      end
+    end
+
+    it 'shifts an opening that falls in the spring-forward gap to the next valid time' do
+      rule.execution_window_start_minutes = (2 * 60) + 30
+      # 05:00 UTC is midnight in New York on the 2026 spring-forward day (02:00-03:00 is skipped).
+      travel_to(Time.utc(2026, 3, 8, 5, 0)) do
+        expect(rule.next_execution_window_start('America/New_York')).to eq(Time.utc(2026, 3, 8, 7, 30))
+      end
+    end
+  end
+
   describe 'discarding stale pending executions on edit' do
     let(:account) { create(:account) }
     let(:conversation) { create(:conversation, account: account, status: :pending) }
@@ -250,6 +367,11 @@ RSpec.describe AutomationRule do
 
     it 'discards armed rows when the delay changes' do
       rule.update!(execution_delay: 120)
+      expect(rule.pending_executions.pending).to be_empty
+    end
+
+    it 'discards armed rows when the execution window changes' do
+      rule.update!(execution_window_start_minutes: 9 * 60, execution_window_end_minutes: 18 * 60)
       expect(rule.pending_executions.pending).to be_empty
     end
 

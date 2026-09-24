@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { messageStamp } from 'shared/helpers/timeHelper';
 import { formatDelay } from 'dashboard/helper/automationHelper';
+import { getTime } from 'dashboard/routes/dashboard/settings/inbox/helpers/businessHour';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ToggleSwitch from 'dashboard/components-next/switch/Switch.vue';
 import { BaseTableRow, BaseTableCell } from 'dashboard/components-next/table';
@@ -22,6 +23,18 @@ const emit = defineEmits(['toggle', 'edit', 'delete', 'clone']);
 const readableDate = date => messageStamp(new Date(date), 'LLL d, yyyy');
 const readableDateWithTime = date =>
   messageStamp(new Date(date), 'LLL d, yyyy hh:mm a');
+
+const formatWindowTime = minutes =>
+  getTime(Math.floor(minutes / 60), minutes % 60);
+
+const executionWindowLabel = computed(() => {
+  const {
+    execution_window_start_minutes: start,
+    execution_window_end_minutes: end,
+  } = props.automation;
+  if (start == null || end == null) return '';
+  return `${formatWindowTime(start)} - ${formatWindowTime(end)}`;
+});
 
 const automationActive = computed({
   get: () => props.automation.active,
@@ -51,6 +64,16 @@ const automationActive = computed({
             {{
               $t('AUTOMATION.LIST.DELAY_BADGE', {
                 delay: formatDelay(automation.execution_delay),
+              })
+            }}
+          </span>
+          <span
+            v-if="executionWindowLabel"
+            class="text-xs px-1.5 py-0.5 rounded-md bg-n-alpha-2 text-n-slate-11 whitespace-nowrap flex-shrink-0"
+          >
+            {{
+              $t('AUTOMATION.LIST.WINDOW_BADGE', {
+                window: executionWindowLabel,
               })
             }}
           </span>

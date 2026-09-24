@@ -48,6 +48,12 @@
           "FOR_LABEL": "For",
           "INBOX_LABEL": "Inbox",
           "ERROR": "The wait must be between 10 minutes and 30 days",
+          "WINDOW": {
+            "LABEL": "Allowed hours",
+            "ENABLE": "Only run between",
+            "ERROR": "The end time must be after the start time",
+            "TIMEZONE_NOTE": "The allowed hours use the inbox's timezone, so each inbox follows its own local time."
+          },
           "OPTIONS": {
             "CONVERSATION_STATUS": "Conversation stays in a status",
             "CUSTOMER_UNRESPONSIVE": "Customer hasn't replied",
@@ -93,6 +99,7 @@
         "DELAYED": "Runs after a wait"
       },
       "DELAY_BADGE": "Runs after {delay}",
+      "WINDOW_BADGE": "Between {window}",
       "DELAY_DISABLED_BANNER": "Delayed execution is turned off for this account, so the rules below that run after a wait are paused until it is turned back on."
     },
     "DELETE": {

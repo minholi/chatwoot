@@ -210,4 +210,66 @@ RSpec.describe AutomationRules::ProcessPendingExecutionJob do
     expect(row.skip_reason).to eq('episode_moved')
     expect(conversation.messages.outgoing.pluck(:content)).not_to include('Just checking in')
   end
+
+  context 'when the rule has an execution window' do
+    let(:rule) do
+      create(:automation_rule, account: account, event_name: 'conversation_updated', execution_delay: 60,
+                               execution_window_start_minutes: 9 * 60, execution_window_end_minutes: 18 * 60,
+                               conditions: [{ 'values' => ['pending'], 'attribute_key' => 'status',
+                                              'query_operator' => nil, 'filter_operator' => 'equal_to' }],
+                               actions: [{ 'action_name' => 'add_label', 'action_params' => ['stale'] }])
+    end
+
+    it 'runs the actions inside the window' do
+      travel_to(Time.utc(2026, 9, 24, 12, 0)) do
+        job.perform(pending_execution.reload)
+      end
+
+      expect(pending_execution.reload).to be_executed
+      expect(conversation.reload.label_list).to include('stale')
+    end
+
+    it 'defers to the same day opening when the wait comes due before the window' do
+      travel_to(Time.utc(2026, 9, 24, 6, 0)) do
+        job.perform(pending_execution.reload)
+      end
+
+      expect(pending_execution.reload).to be_pending
+      expect(pending_execution.due_at).to eq(Time.utc(2026, 9, 24, 9, 0))
+      expect(conversation.reload.label_list).to be_empty
+    end
+
+    it 'defers to the next day opening when the wait comes due after the window' do
+      travel_to(Time.utc(2026, 9, 24, 20, 0)) do
+        job.perform(pending_execution.reload)
+      end
+
+      expect(pending_execution.reload).to be_pending
+      expect(pending_execution.due_at).to eq(Time.utc(2026, 9, 25, 9, 0))
+      expect(conversation.reload.label_list).to be_empty
+    end
+
+    it 'evaluates the window in the conversation inbox timezone' do
+      conversation.inbox.update!(timezone: 'America/Sao_Paulo')
+      # 11:00 UTC is 08:00 in São Paulo, before the 09:00 opening.
+      travel_to(Time.utc(2026, 9, 24, 11, 0)) do
+        job.perform(pending_execution.reload)
+      end
+
+      expect(pending_execution.reload).to be_pending
+      expect(pending_execution.due_at).to eq(Time.utc(2026, 9, 24, 12, 0))
+    end
+
+    it 'still skips terminally when the episode moved, even outside the window' do
+      conversation.update!(status: :resolved)
+
+      travel_to(Time.utc(2026, 9, 24, 20, 0)) do
+        job.perform(pending_execution.reload)
+      end
+
+      expect(pending_execution.reload).to be_skipped
+      expect(pending_execution.skip_reason).to eq('episode_moved')
+      expect(conversation.reload.label_list).to be_empty
+    end
+  end
 end

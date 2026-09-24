@@ -60,7 +60,7 @@ class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseCont
 
   def automation_rules_permit
     permitted_attributes = [:name, :description, :event_name, :active]
-    permitted_attributes << :execution_delay if delayed_automations_enabled?
+    permitted_attributes += [:execution_delay, :execution_window_start_minutes, :execution_window_end_minutes] if delayed_automations_enabled?
 
     params.permit(
       *permitted_attributes,
@@ -71,7 +71,8 @@ class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseCont
 
   def ensure_execution_delay_allowed
     return if delayed_automations_enabled?
-    return if params[:execution_delay].blank?
+    return if [params[:execution_delay], params[:execution_window_start_minutes],
+               params[:execution_window_end_minutes]].all?(&:blank?)
 
     render_delayed_automations_error
   end

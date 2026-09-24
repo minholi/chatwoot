@@ -11,6 +11,7 @@ class AutomationRules::ProcessPendingExecutionJob < ApplicationJob
 
     skip_reason = skip_reason_for(pending_execution)
     return pending_execution.update!(status: :skipped, skip_reason: skip_reason) if skip_reason
+    return defer_outside_execution_window(pending_execution) unless within_execution_window?(pending_execution)
 
     execute(pending_execution)
   rescue StandardError => e
@@ -47,6 +48,20 @@ class AutomationRules::ProcessPendingExecutionJob < ApplicationJob
       pending_execution.conversation,
       { message: pending_execution.message }
     ).perform.present?
+  end
+
+  def within_execution_window?(pending_execution)
+    pending_execution.automation_rule.within_execution_window?(pending_execution.conversation.inbox.timezone)
+  end
+
+  # Outside the allowed window the row stays pending and is re-armed for the next opening, so the
+  # actions run during the configured hours instead of being dropped for the episode.
+  def defer_outside_execution_window(pending_execution)
+    rule = pending_execution.automation_rule
+    pending_execution.update!(
+      status: :pending,
+      due_at: rule.next_execution_window_start(pending_execution.conversation.inbox.timezone)
+    )
   end
 
   # Marked before the actions run: a row that dies here stays `executing`, which no sweep reclaims,
