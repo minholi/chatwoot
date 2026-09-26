@@ -2,17 +2,18 @@
 #
 # Table name: automation_rules
 #
-#  id              :bigint           not null, primary key
-#  actions         :jsonb            not null
-#  active          :boolean          default(TRUE), not null
-#  conditions      :jsonb            not null
-#  description     :text
-#  event_name      :string           not null
-#  execution_delay :integer
-#  name            :string           not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
-#  account_id      :bigint           not null
+#  id                    :bigint           not null, primary key
+#  actions               :jsonb            not null
+#  active                :boolean          default(TRUE), not null
+#  conditions            :jsonb            not null
+#  description           :text
+#  event_name            :string           not null
+#  execution_delay       :integer
+#  name                  :string           not null
+#  only_during_business_hours :boolean          default(FALSE), not null
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  account_id            :bigint           not null
 #
 # Indexes
 #
@@ -39,6 +40,7 @@ class AutomationRule < ApplicationRecord
   validates :execution_delay, numericality: { only_integer: true, in: EXECUTION_DELAY_RANGE }, allow_nil: true
   validate :execution_delay_supported_conditions
   validate :execution_delay_supported_event
+  validate :only_during_business_hours_supported
 
   after_update_commit :reauthorized!, if: -> { saved_change_to_conditions? }
   # Discard rows armed under the old definition; they re-arm on the next matching event.
@@ -72,7 +74,24 @@ class AutomationRule < ApplicationRecord
     end
   end
 
+  def within_business_hours?(inbox)
+    !only_during_business_hours? || AutomationRules::BusinessHoursService.new(inbox: inbox).open?
+  end
+
+  def next_business_hours_start(inbox)
+    return nil unless only_during_business_hours?
+
+    AutomationRules::BusinessHoursService.new(inbox: inbox).next_opening
+  end
+
   private
+
+  # An instant rule runs synchronously on the matching event, so there is no queue to defer it.
+  def only_during_business_hours_supported
+    return unless only_during_business_hours? && execution_delay.blank?
+
+    errors.add(:only_during_business_hours, 'can only be used with an execution delay.')
+  end
 
   def json_conditions_format
     return if conditions.blank?
@@ -129,7 +148,7 @@ class AutomationRule < ApplicationRecord
   # run the actions the admin turned it off to stop.
   def execution_config_changed?
     saved_change_to_active? || saved_change_to_execution_delay? || saved_change_to_event_name? ||
-      saved_change_to_conditions? || saved_change_to_actions?
+      saved_change_to_conditions? || saved_change_to_actions? || saved_change_to_only_during_business_hours?
   end
 
   def discard_stale_pending_executions

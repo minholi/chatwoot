@@ -230,6 +230,30 @@ RSpec.describe AutomationRule do
       rule.conditions = [{ 'attribute_key' => 'message_type', 'filter_operator' => 'equal_to', 'values' => ['outgoing'], 'query_operator' => nil }]
       expect(rule).to be_valid
     end
+
+    it 'rejects only_during_business_hours without an execution delay' do
+      rule.only_during_business_hours = true
+
+      expect(rule).not_to be_valid
+      expect(rule.errors[:only_during_business_hours]).to include('can only be used with an execution delay.')
+    end
+
+    it 'allows only_during_business_hours with an execution delay' do
+      rule.execution_delay = 60
+      rule.only_during_business_hours = true
+
+      expect(rule).to be_valid
+    end
+  end
+
+  describe 'within_business_hours?' do
+    let(:account) { create(:account) }
+    let(:inbox) { create(:inbox, account: account, working_hours_enabled: true) }
+    let(:rule) { create(:automation_rule, account: account, execution_delay: 60) }
+
+    it 'is true when the rule is not gated' do
+      expect(rule.within_business_hours?(inbox)).to be true
+    end
   end
 
   describe 'discarding stale pending executions on edit' do
@@ -251,6 +275,11 @@ RSpec.describe AutomationRule do
     it 'discards armed rows when the delay changes' do
       rule.update!(execution_delay: 120)
       expect(rule.pending_executions.pending).to be_empty
+    end
+
+    it 'discards armed rows when the business hours flag changes' do
+      rule.update!(only_during_business_hours: true)
+      expect(rule.pending_executions.armed).to be_empty
     end
 
     it 'discards armed rows when the rule is deactivated, so reactivating cannot resurrect them' do

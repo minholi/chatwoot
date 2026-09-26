@@ -1,6 +1,7 @@
 import { nextTick, reactive } from 'vue';
 import { shallowMount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import NextButton from 'dashboard/components-next/button/Button.vue';
 import AutomationRuleForm from './AutomationRuleForm.vue';
 import AutomationRunTypeSelector from './components/AutomationRunTypeSelector.vue';
 import AutomationWaitCondition from './components/AutomationWaitCondition.vue';
@@ -36,7 +37,7 @@ const triggerStub = {
 };
 
 const waitConditionStub = {
-  props: ['isSavedWait'],
+  props: ['isSavedWait', 'onlyDuringBusinessHours'],
   template: '<div />',
   methods: {
     resetValidation: vi.fn(),
@@ -65,7 +66,7 @@ const waitConditions = [
   {
     attribute_key: 'private_note',
     filter_operator: 'equal_to',
-    values: false,
+    values: [false],
     query_operator: 'and',
     custom_attribute_type: '',
   },
@@ -78,11 +79,15 @@ const waitConditions = [
   },
 ];
 
-const buildAutomation = ({ delayed = false } = {}) => ({
+const buildAutomation = ({
+  delayed = false,
+  onlyDuringBusinessHours = false,
+} = {}) => ({
   name: 'Follow up',
   description: 'Follow up after a wait',
   event_name: delayed ? 'message_created' : 'conversation_created',
   execution_delay: delayed ? 60 : null,
+  only_during_business_hours: delayed && onlyDuringBusinessHours,
   conditions: structuredClone(delayed ? waitConditions : instantConditions),
   actions: [{ action_name: 'assign_agent', action_params: [] }],
   files: [],
@@ -184,5 +189,63 @@ describe('AutomationRuleForm', () => {
     expect(
       wrapper.findComponent(AutomationWaitCondition).props('isSavedWait')
     ).toBe(true);
+  });
+
+  it('hydrates the business hours gate from the saved rule', async () => {
+    const automation = buildAutomation({
+      delayed: true,
+      onlyDuringBusinessHours: true,
+    });
+    const wrapper = mountComponent({ mode: 'edit', automation });
+    wrapper.vm.open(
+      automation.execution_delay,
+      automation.only_during_business_hours
+    );
+    await nextTick();
+
+    expect(
+      wrapper
+        .findComponent(AutomationWaitCondition)
+        .props('onlyDuringBusinessHours')
+    ).toBe(true);
+  });
+
+  it('submits the business hours gate with the payload', async () => {
+    const automation = buildAutomation({
+      delayed: true,
+      onlyDuringBusinessHours: true,
+    });
+    automation.actions = [{ action_name: 'assign_agent', action_params: [1] }];
+    const wrapper = mountComponent({ mode: 'edit', automation });
+    wrapper.vm.open(
+      automation.execution_delay,
+      automation.only_during_business_hours
+    );
+    await nextTick();
+
+    await wrapper.findAllComponents(NextButton).at(-1).trigger('click');
+
+    const [payload] = wrapper.emitted('save')[0];
+    expect(payload).toMatchObject({
+      execution_delay: 60,
+      only_during_business_hours: true,
+    });
+  });
+
+  it('clears the business hours gate when the rule runs instantly', async () => {
+    const automation = buildAutomation({
+      delayed: true,
+      onlyDuringBusinessHours: true,
+    });
+    const wrapper = mountComponent({ mode: 'edit', automation });
+    wrapper.vm.open(
+      automation.execution_delay,
+      automation.only_during_business_hours
+    );
+    await nextTick();
+
+    await selectRunType(wrapper, false);
+
+    expect(automation.only_during_business_hours).toBe(false);
   });
 });

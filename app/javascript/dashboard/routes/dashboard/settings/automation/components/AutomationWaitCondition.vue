@@ -7,6 +7,7 @@ import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue
 import DurationInput from 'dashboard/components-next/input/DurationInput.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
 import { DURATION_UNITS } from 'dashboard/components-next/input/constants';
 import {
   DELAYED_TRIGGERS,
@@ -47,6 +48,10 @@ const eventName = defineModel('eventName', { type: String, required: true });
 const conditions = defineModel('conditions', { type: Array, required: true });
 const delay = defineModel('delay', { type: Number, default: null });
 const unit = defineModel('unit', { type: String, required: true });
+const onlyDuringBusinessHours = defineModel('onlyDuringBusinessHours', {
+  type: Boolean,
+  default: false,
+});
 
 const { t } = useI18n();
 
@@ -432,6 +437,20 @@ defineExpose({ validate, resetValidation });
             </p>
           </div>
         </aside>
+      </div>
+      <div class="flex flex-col gap-2 pt-3 border-t border-n-weak">
+        <div class="flex items-center justify-between gap-3 min-h-8">
+          <span class="text-sm text-n-slate-12">
+            {{ $t('AUTOMATION.ADD.FORM.WAIT.BUSINESS_HOURS_LABEL') }}
+          </span>
+          <Switch v-model="onlyDuringBusinessHours" />
+        </div>
+        <p class="mb-0 text-xs text-n-slate-11">
+          {{ $t('AUTOMATION.ADD.FORM.WAIT.BUSINESS_HOURS_HINT') }}
+        </p>
+        <p class="mb-0 text-xs text-n-slate-11">
+          {{ $t('AUTOMATION.ADD.FORM.WAIT.BUSINESS_HOURS_INBOX_HINT') }}
+        </p>
       </div>
       <div
         v-if="additionalConditionIndexes.length"

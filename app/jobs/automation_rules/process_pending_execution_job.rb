@@ -11,6 +11,7 @@ class AutomationRules::ProcessPendingExecutionJob < ApplicationJob
 
     skip_reason = skip_reason_for(pending_execution)
     return pending_execution.update!(status: :skipped, skip_reason: skip_reason) if skip_reason
+    return defer_outside_business_hours(pending_execution) unless within_business_hours?(pending_execution)
 
     execute(pending_execution)
   rescue StandardError => e
@@ -47,6 +48,18 @@ class AutomationRules::ProcessPendingExecutionJob < ApplicationJob
       pending_execution.conversation,
       { message: pending_execution.message }
     ).perform.present?
+  end
+
+  def within_business_hours?(pending_execution)
+    pending_execution.automation_rule.within_business_hours?(pending_execution.conversation.inbox)
+  end
+
+  # A schedule that never opens in the next week must not strand the row forever, so run it instead.
+  def defer_outside_business_hours(pending_execution)
+    next_opening = pending_execution.automation_rule.next_business_hours_start(pending_execution.conversation.inbox)
+    return execute(pending_execution) if next_opening.nil?
+
+    pending_execution.update!(status: :pending, due_at: next_opening)
   end
 
   # Marked before the actions run: a row that dies here stays `executing`, which no sweep reclaims,
