@@ -8,4 +8,5 @@ json.actions automation_rule.actions
 json.created_on automation_rule.created_at.to_i
 json.active automation_rule.active?
 json.execution_delay automation_rule.execution_delay
+json.only_during_business_hours automation_rule.only_during_business_hours
 json.files automation_rule.file_base_data if automation_rule.files.any?

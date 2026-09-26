@@ -47,10 +47,11 @@ const syncAutomationFromSelected = (source = props.selectedResponse) => {
 };
 
 // Format from the rule passed to open(): the prop updates a tick later, so at open() time
-// automation still holds the previously selected rule (its execution_delay hydrates the form).
+// automation still holds the previously selected rule (its execution_delay and
+// only_during_business_hours hydrate the form).
 const open = rule => {
   syncAutomationFromSelected(rule);
-  formRef.value?.open(rule?.execution_delay);
+  formRef.value?.open(rule?.execution_delay, rule?.only_during_business_hours);
 };
 const close = () => formRef.value?.close();
 

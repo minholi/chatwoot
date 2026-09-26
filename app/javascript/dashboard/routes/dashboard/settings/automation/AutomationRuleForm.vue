@@ -103,6 +103,7 @@ const isDelayed = ref(false);
 const isSavedWait = ref(false);
 const delayMinutes = ref(DEFAULT_DELAY_MINUTES);
 const delayUnit = ref(DURATION_UNITS.HOURS);
+const onlyDuringBusinessHours = ref(false);
 const instantTriggerDraft = shallowRef(null);
 const waitTriggerDraft = shallowRef(null);
 const isSyncingDelayState = ref(false);
@@ -141,13 +142,18 @@ const restoreTriggerDraft = draft => {
   automation.value.conditions = cloneConditions(draft.conditions);
 };
 
-// Show the wait in the largest whole unit (240 min → 4 hours). The delay is passed in by open()
-// rather than read from `automation`, whose model prop only settles a tick later.
-const syncDelayState = executionDelay => {
+// Show the wait in the largest whole unit (240 min → 4 hours). The delay and the business-hours
+// gate are passed in by open() rather than read from `automation`, whose model prop only settles
+// a tick later.
+const syncDelayState = (
+  executionDelay,
+  savedOnlyDuringBusinessHours = false
+) => {
   isSyncingDelayState.value = true;
   isDelayed.value = Boolean(executionDelay);
   isSyncingDelayState.value = false;
   isSavedWait.value = isEditMode.value && Boolean(executionDelay);
+  onlyDuringBusinessHours.value = Boolean(savedOnlyDuringBusinessHours);
   const minutes = executionDelay || DEFAULT_DELAY_MINUTES;
   if (minutes % 1440 === 0) delayUnit.value = DURATION_UNITS.DAYS;
   else if (minutes % 60 === 0) delayUnit.value = DURATION_UNITS.HOURS;
@@ -180,8 +186,13 @@ watch(
   { flush: 'sync' }
 );
 
-watch([isDelayed, delayMinutes], () => {
-  if (!automation.value || !allowsDelayedExecution.value) return;
+watch([isDelayed, delayMinutes, onlyDuringBusinessHours], () => {
+  if (!automation.value) return;
+  automation.value.only_during_business_hours =
+    allowsDelayedExecution.value &&
+    isDelayed.value &&
+    onlyDuringBusinessHours.value;
+  if (!allowsDelayedExecution.value) return;
   automation.value.execution_delay = isDelayed.value
     ? delayMinutes.value
     : null;
@@ -319,9 +330,9 @@ const syncCustomAttributeTypes = () => {
   });
 };
 
-const open = (executionDelay = null) => {
+const open = (executionDelay = null, savedOnlyDuringBusinessHours = false) => {
   resetValidation();
-  syncDelayState(executionDelay);
+  syncDelayState(executionDelay, savedOnlyDuringBusinessHours);
   panelRef.value?.open();
 };
 
@@ -340,7 +351,10 @@ const emitSaveAutomation = () => {
   if (Object.keys(errors.value).length === 0 && conditionsValid) {
     const payload = generateAutomationPayload(automation.value);
     // The API rejects the param when the feature is off; existing values are kept server-side.
-    if (!allowsDelayedExecution.value) delete payload.execution_delay;
+    if (!allowsDelayedExecution.value) {
+      delete payload.execution_delay;
+      delete payload.only_during_business_hours;
+    }
     emit('save', payload, props.mode);
   }
 };
@@ -383,6 +397,7 @@ defineExpose({ open, close });
         v-model:conditions="automation.conditions"
         v-model:delay="delayMinutes"
         v-model:unit="delayUnit"
+        v-model:only-during-business-hours="onlyDuringBusinessHours"
         :status-options="statusOptions"
         :inbox-options="inboxOptions"
         :filter-types="filterTypes"

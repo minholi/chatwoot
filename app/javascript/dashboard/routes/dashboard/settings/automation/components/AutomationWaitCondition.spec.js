@@ -2,6 +2,7 @@ import { h, nextTick } from 'vue';
 import { shallowMount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import NextButton from 'dashboard/components-next/button/Button.vue';
+import Switch from 'dashboard/components-next/switch/Switch.vue';
 import ConditionRow from 'dashboard/components-next/filter/ConditionRow.vue';
 import FilterSelect from 'dashboard/components-next/filter/inputs/FilterSelect.vue';
 import MultiSelect from 'dashboard/components-next/filter/inputs/MultiSelect.vue';
@@ -107,6 +108,20 @@ describe('AutomationWaitCondition', () => {
       },
     ]);
     expect(wrapper.findComponent(NextButton).exists()).toBe(false);
+  });
+
+  it('reflects the business hours gate and updates it on toggle', async () => {
+    const wrapper = mountComponent({ onlyDuringBusinessHours: true });
+
+    const businessHoursSwitch = wrapper.findComponent(Switch);
+    expect(businessHoursSwitch.props('modelValue')).toBe(true);
+
+    businessHoursSwitch.vm.$emit('update:modelValue', false);
+    await nextTick();
+
+    expect(wrapper.emitted('update:onlyDuringBusinessHours').at(-1)).toEqual([
+      false,
+    ]);
   });
 
   it('hydrates and updates the status condition for a saved wait', async () => {

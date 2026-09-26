@@ -47,6 +47,9 @@
           "STATUS_LABEL": "Status is",
           "FOR_LABEL": "For",
           "INBOX_LABEL": "Inbox",
+          "BUSINESS_HOURS_LABEL": "Only during business hours",
+          "BUSINESS_HOURS_HINT": "The actions run only while the conversation's inbox is open. Outside those hours they wait until the inbox reopens.",
+          "BUSINESS_HOURS_INBOX_HINT": "Inboxes without business hours set up are not affected.",
           "ERROR": "The wait must be between 10 minutes and 30 days",
           "OPTIONS": {
             "CONVERSATION_STATUS": "Conversation stays in a status",
