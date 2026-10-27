@@ -210,4 +210,51 @@ RSpec.describe AutomationRules::ProcessPendingExecutionJob do
     expect(row.skip_reason).to eq('episode_moved')
     expect(conversation.messages.outgoing.pluck(:content)).not_to include('Just checking in')
   end
+
+  describe 'business hours gate' do
+    let(:gated_rule) do
+      create(:automation_rule, account: account, event_name: 'conversation_updated', execution_delay: 60,
+                               only_during_business_hours: true,
+                               conditions: [{ 'values' => ['pending'], 'attribute_key' => 'status', 'query_operator' => nil,
+                                              'filter_operator' => 'equal_to' }],
+                               actions: [{ 'action_name' => 'add_label', 'action_params' => ['stale'] }])
+    end
+    let(:gated_execution) do
+      AutomationRulePendingExecution.schedule(rule: gated_rule, conversation: conversation)
+      AutomationRulePendingExecution.last.tap { |row| row.update!(due_at: 1.minute.ago) }
+    end
+
+    it 'defers to the next opening while the inbox is closed' do
+      conversation.inbox.update!(working_hours_enabled: true)
+
+      travel_to(Time.zone.parse('2024-01-20 10:00:00')) do # Saturday
+        row = gated_execution
+        job.perform(row.reload)
+
+        expect(row.reload).to be_pending
+        expect(row.due_at).to eq(Time.zone.parse('2024-01-22 09:00:00'))
+        expect(conversation.reload.label_list).to be_empty
+      end
+    end
+
+    it 'runs the actions while the inbox is open' do
+      conversation.inbox.update!(working_hours_enabled: true)
+
+      travel_to(Time.zone.parse('2024-01-15 10:00:00')) do # Monday
+        job.perform(gated_execution.reload)
+
+        expect(gated_execution.reload).to be_executed
+        expect(conversation.reload.label_list).to include('stale')
+      end
+    end
+
+    it 'runs the actions when the inbox has no business hours configured' do
+      travel_to(Time.zone.parse('2024-01-20 10:00:00')) do # Saturday
+        job.perform(gated_execution.reload)
+
+        expect(gated_execution.reload).to be_executed
+        expect(conversation.reload.label_list).to include('stale')
+      end
+    end
+  end
 end

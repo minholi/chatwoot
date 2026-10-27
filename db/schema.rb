@@ -318,6 +318,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_19_143116) do
     t.datetime "updated_at", null: false
     t.boolean "active", default: true, null: false
     t.integer "execution_delay"
+    t.boolean "only_during_business_hours", default: false, null: false
     t.bigint "monitor_id"
     t.datetime "monitor_event_activated_at"
     t.index ["account_id"], name: "index_automation_rules_on_account_id"
