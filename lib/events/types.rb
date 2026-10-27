@@ -52,6 +52,10 @@ module Events::Types
   INBOX_CREATED = 'inbox.created'
   INBOX_UPDATED = 'inbox.updated'
 
+  # csat events
+  CSAT_SURVEY_RESPONSE_CREATED = 'csat_survey_response.created'
+  CSAT_SURVEY_RESPONSE_UPDATED = 'csat_survey_response.updated'
+
   # notification events
   NOTIFICATION_CREATED = 'notification.created'
   NOTIFICATION_DELETED = 'notification.deleted'

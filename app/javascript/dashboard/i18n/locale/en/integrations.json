@@ -129,6 +129,8 @@
             "CONTACT_UPDATED": "Contact updated",
             "CONVERSATION_TYPING_ON": "Conversation Typing On",
             "CONVERSATION_TYPING_OFF": "Conversation Typing Off",
+            "CSAT_SURVEY_RESPONSE_CREATED": "CSAT survey response created",
+            "CSAT_SURVEY_RESPONSE_UPDATED": "CSAT survey response updated",
             "INBOX_UPDATED": "Inbox updated"
           }
         },
