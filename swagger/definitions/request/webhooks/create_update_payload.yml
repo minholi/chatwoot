@@ -23,6 +23,8 @@ properties:
           'webwidget_triggered',
           'conversation_typing_on',
           'conversation_typing_off',
+          'csat_survey_response_created',
+          'csat_survey_response_updated',
         ]
     description: The events you want to subscribe to.
     example:

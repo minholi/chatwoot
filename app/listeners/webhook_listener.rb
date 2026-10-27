@@ -83,6 +83,19 @@ class WebhookListener < BaseListener
     deliver_account_webhooks(payload, account)
   end
 
+  def csat_survey_response_created(event)
+    csat_survey_response = event.data[:csat_survey_response]
+    payload = csat_survey_response.webhook_data.merge(event: __method__.to_s)
+    deliver_account_webhooks(payload, csat_survey_response.account)
+  end
+
+  def csat_survey_response_updated(event)
+    csat_survey_response = event.data[:csat_survey_response]
+    changed_attributes = extract_changed_attributes(event)
+    payload = csat_survey_response.webhook_data.merge(event: __method__.to_s, changed_attributes: changed_attributes)
+    deliver_account_webhooks(payload, csat_survey_response.account)
+  end
+
   def conversation_typing_on(event)
     handle_typing_status(__method__.to_s, event)
   end
