@@ -56,7 +56,7 @@ class CsatTemplateManagementService
 
   def create_whatsapp_template(template_params)
     template_config = build_template_config(template_params)
-    Whatsapp::CsatTemplateService.new(@inbox.channel).create_template(template_config)
+    @inbox.channel.provider_service.create_csat_template(template_config)
   end
 
   def build_template_config(template_params)
@@ -130,7 +130,7 @@ class CsatTemplateManagementService
 
   def get_whatsapp_template_status(template)
     template_name = template['name'] || CsatTemplateNameService.csat_template_name(@inbox.id)
-    status_result = Whatsapp::CsatTemplateService.new(@inbox.channel).get_template_status(template_name)
+    status_result = @inbox.channel.provider_service.get_template_status(template_name)
     return { template_exists: false, error: 'Template not found' } unless status_result.is_a?(Hash)
 
     if status_result[:success]
@@ -182,11 +182,11 @@ class CsatTemplateManagementService
     template_name = template['name']
     return true if template_name.blank?
 
-    csat_template_service = Whatsapp::CsatTemplateService.new(@inbox.channel)
-    template_status = csat_template_service.get_template_status(template_name)
+    provider_service = @inbox.channel.provider_service
+    template_status = provider_service.get_template_status(template_name)
     return true unless template_status[:success]
 
-    deletion_result = csat_template_service.delete_template(template_name)
+    deletion_result = provider_service.delete_csat_template(template_name)
     if deletion_result[:success]
       Rails.logger.info "Deleted existing CSAT template '#{template_name}' for inbox #{@inbox.id}"
       true

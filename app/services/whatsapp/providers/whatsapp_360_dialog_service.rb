@@ -51,11 +51,27 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
     "#{api_base_path}/#{media_id}"
   end
 
-  private
+  def create_csat_template(template_config)
+    csat_template_service.create_template(template_config)
+  end
+
+  def delete_csat_template(template_name = nil)
+    csat_template_service.delete_template(template_name)
+  end
+
+  def get_template_status(template_name)
+    csat_template_service.get_template_status(template_name)
+  end
 
   def api_base_path
     # provide the environment variable when testing against sandbox : 'https://waba-sandbox.360dialog.io/v1'
     ENV.fetch('360DIALOG_BASE_URL', 'https://waba-v2.360dialog.io')
+  end
+
+  private
+
+  def csat_template_service
+    @csat_template_service ||= Whatsapp::Csat360DialogTemplateService.new(whatsapp_channel)
   end
 
   def send_text_message(phone_number, message)
@@ -112,7 +128,7 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
         code: template_info[:lang_code]
       },
       components: template_info[:parameters]
-    }
+    }.compact
   end
 
   def whatsapp_reply_context(message)

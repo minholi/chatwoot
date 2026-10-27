@@ -119,7 +119,7 @@ class Api::V1::Accounts::InboxCsatTemplatesController < Api::V1::Accounts::BaseC
       error_data = JSON.parse(response_body)
       whatsapp_error = error_data['error'] || {}
 
-      user_message = whatsapp_error['error_user_msg'] || whatsapp_error['message']
+      user_message = whatsapp_error['error_user_msg'] || whatsapp_error['message'] || error_data.dig('meta', 'developer_message')
       technical_details = {
         code: whatsapp_error['code'],
         subcode: whatsapp_error['error_subcode'],
