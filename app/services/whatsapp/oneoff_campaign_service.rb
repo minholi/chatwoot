@@ -31,10 +31,6 @@ class Whatsapp::OneoffCampaignService
     raise 'Completed Campaign' if campaign.completed?
   end
 
-  def validate_provider!
-    raise 'WhatsApp Cloud provider required' unless whatsapp_cloud_channel?
-  end
-
   def validate_feature_flag!
     raise 'WhatsApp campaigns feature not enabled' unless campaign.account.feature_enabled?(:campaigns)
   end
@@ -42,7 +38,6 @@ class Whatsapp::OneoffCampaignService
   def validate_campaign!
     validate_campaign_type!
     validate_campaign_status!
-    validate_provider!
     validate_feature_flag!
   end
 
@@ -149,10 +144,6 @@ class Whatsapp::OneoffCampaignService
 
   def bsuid_source_id?(source_id)
     source_id.to_s.delete_prefix('whatsapp:').match?(RegexHelper::WHATSAPP_BSUID_REGEX)
-  end
-
-  def whatsapp_cloud_channel?
-    channel.is_a?(Channel::Whatsapp) && channel.provider == 'whatsapp_cloud'
   end
 end
 
