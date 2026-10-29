@@ -122,6 +122,7 @@ class Whatsapp::OneoffCampaignService
 
   def campaign_destination(contact)
     return [contact.phone_number, nil] if contact.phone_number.present?
+    return [nil, 'Phone number is missing; BSUID recipients are only supported on WhatsApp Cloud inboxes'] unless whatsapp_cloud_channel?
 
     bsuid_contact_inboxes = bsuid_contact_inboxes_for(contact)
     return [nil, 'Phone number and BSUID are missing'] if bsuid_contact_inboxes.empty?
@@ -144,6 +145,10 @@ class Whatsapp::OneoffCampaignService
 
   def bsuid_source_id?(source_id)
     source_id.to_s.delete_prefix('whatsapp:').match?(RegexHelper::WHATSAPP_BSUID_REGEX)
+  end
+
+  def whatsapp_cloud_channel?
+    channel.provider == 'whatsapp_cloud'
   end
 end
 

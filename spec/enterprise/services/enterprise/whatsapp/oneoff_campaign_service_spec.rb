@@ -102,6 +102,20 @@ RSpec.describe Enterprise::Whatsapp::OneoffCampaignService do
       expect(recipient).to be_failed
       expect(recipient.error_message).to eq('Template name does not exist in the translation')
     end
+
+    context 'when the contact has no phone number and only a BSUID' do
+      let(:contact) { create(:contact, account: account, phone_number: nil) }
+
+      before { create(:contact_inbox, contact: contact, inbox: whatsapp_inbox, source_id: 'IN.2081978709342942') }
+
+      it 'marks the recipient as skipped without calling the 360dialog API' do
+        expect(whatsapp_channel).not_to receive(:send_template)
+
+        Whatsapp::OneoffCampaignService.new(campaign: campaign).perform_batch(0)
+
+        expect(campaign.campaign_recipients.find_by!(contact: contact)).to be_skipped
+      end
+    end
   end
 
   it 'does not associate a normalized identity belonging to another contact' do
