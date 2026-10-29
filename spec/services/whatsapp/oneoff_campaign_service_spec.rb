@@ -62,12 +62,6 @@ describe Whatsapp::OneoffCampaignService do
         expect { described_class.new(campaign: campaign).perform }.to raise_error "Invalid campaign #{campaign.id}"
       end
 
-      it 'raises error when channel provider is not whatsapp_cloud' do
-        whatsapp_channel.update!(provider: 'default')
-
-        expect { described_class.new(campaign: campaign).perform }.to raise_error 'WhatsApp Cloud provider required'
-      end
-
       it 'raises error when WhatsApp campaigns feature is not enabled' do
         account.disable_features!(:campaigns)
 
@@ -334,6 +328,44 @@ describe Whatsapp::OneoffCampaignService do
         perform_enqueued_jobs do
           described_class.new(campaign: campaign).perform
         end
+      end
+    end
+
+    context 'when the inbox uses the 360dialog provider' do
+      before { whatsapp_channel.update!(provider: 'default') }
+
+      it 'sends the campaign template through the 360dialog API' do
+        contact = create(:contact, :with_phone_number, account: account)
+        contact.update_labels([label1.title])
+        send_request = stub_request(:post, 'https://waba-v2.360dialog.io/messages')
+                       .with(
+                         headers: { 'D360-API-KEY' => 'test_key' },
+                         body: hash_including(
+                           'to' => contact.phone_number,
+                           'type' => 'template',
+                           'template' => hash_including(
+                             'name' => 'ticket_status_updated',
+                             'namespace' => '23423423_2342423_324234234_2343224',
+                             'language' => { 'policy' => 'deterministic', 'code' => 'en' },
+                             'components' => [{
+                               'type' => 'body',
+                               'parameters' => [
+                                 { 'type' => 'text', 'parameter_name' => 'name', 'text' => 'John' },
+                                 { 'type' => 'text', 'parameter_name' => 'ticket_id', 'text' => '2332' }
+                               ]
+                             }]
+                           )
+                         )
+                       )
+                       .to_return(status: 200, body: { messages: [{ id: 'wamid.360dialog' }] }.to_json,
+                                  headers: { 'Content-Type' => 'application/json' })
+
+        perform_enqueued_jobs do
+          described_class.new(campaign: campaign).perform
+        end
+
+        expect(send_request).to have_been_requested.once
+        expect(campaign.reload).to be_completed
       end
     end
 

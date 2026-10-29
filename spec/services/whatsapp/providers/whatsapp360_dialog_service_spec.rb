@@ -21,6 +21,39 @@ describe Whatsapp::Providers::Whatsapp360DialogService do
     end
   end
 
+  describe '#send_template' do
+    let(:template_info) { { name: 'black_friday', lang_code: 'pt_BR', parameters: [] } }
+    let(:template_category) { 'MARKETING' }
+
+    before do
+      whatsapp_channel.update!(message_templates: [
+                                 { 'name' => 'black_friday', 'language' => 'pt_BR', 'status' => 'approved', 'category' => template_category }
+                               ])
+    end
+
+    it 'sends marketing templates through the Marketing Messages Lite API with Cloud API fallback' do
+      stub_request(:post, 'https://waba-v2.360dialog.io/marketing_messages')
+        .with(body: hash_including('to' => '+123456789', 'type' => 'template', 'product_policy' => 'cloud_api_fallback',
+                                   'template' => hash_including('name' => 'black_friday')))
+        .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+      expect(service.send_template('+123456789', template_info, nil)).to eq 'message_id'
+    end
+
+    context 'when the template is not a marketing template' do
+      let(:template_category) { 'UTILITY' }
+
+      it 'sends it through the messages endpoint' do
+        send_request = stub_request(:post, 'https://waba-v2.360dialog.io/messages')
+                       .with { |request| JSON.parse(request.body).exclude?('product_policy') }
+                       .to_return(status: 200, body: whatsapp_response.to_json, headers: response_headers)
+
+        expect(service.send_template('+123456789', template_info, nil)).to eq 'message_id'
+        expect(send_request).to have_been_requested
+      end
+    end
+  end
+
   describe '#send_interactive message' do
     context 'when called' do
       it 'calls message endpoints with button payload when number of items is less than or equal to 3' do

@@ -31,10 +31,6 @@ class Whatsapp::OneoffCampaignService
     raise 'Completed Campaign' if campaign.completed?
   end
 
-  def validate_provider!
-    raise 'WhatsApp Cloud provider required' unless whatsapp_cloud_channel?
-  end
-
   def validate_feature_flag!
     raise 'WhatsApp campaigns feature not enabled' unless campaign.account.feature_enabled?(:campaigns)
   end
@@ -42,7 +38,6 @@ class Whatsapp::OneoffCampaignService
   def validate_campaign!
     validate_campaign_type!
     validate_campaign_status!
-    validate_provider!
     validate_feature_flag!
   end
 
@@ -127,6 +122,7 @@ class Whatsapp::OneoffCampaignService
 
   def campaign_destination(contact)
     return [contact.phone_number, nil] if contact.phone_number.present?
+    return [nil, 'Phone number is missing; BSUID recipients are only supported on WhatsApp Cloud inboxes'] unless whatsapp_cloud_channel?
 
     bsuid_contact_inboxes = bsuid_contact_inboxes_for(contact)
     return [nil, 'Phone number and BSUID are missing'] if bsuid_contact_inboxes.empty?
@@ -152,7 +148,7 @@ class Whatsapp::OneoffCampaignService
   end
 
   def whatsapp_cloud_channel?
-    channel.is_a?(Channel::Whatsapp) && channel.provider == 'whatsapp_cloud'
+    channel.provider == 'whatsapp_cloud'
   end
 end
 

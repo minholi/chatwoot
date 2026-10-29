@@ -72,6 +72,52 @@ RSpec.describe Enterprise::Whatsapp::OneoffCampaignService do
     end
   end
 
+  context 'when the inbox uses the 360dialog provider' do
+    let(:contact) { create(:contact, :with_phone_number, account: account) }
+
+    before do
+      whatsapp_channel.update!(provider: 'default')
+      contact.update_labels([label.title])
+    end
+
+    it 'marks the recipient as sent with the 360dialog message id' do
+      stub_request(:post, 'https://waba-v2.360dialog.io/messages')
+        .to_return(status: 200, body: { messages: [{ id: 'wamid.360dialog' }] }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform_batch(0)
+
+      recipient = campaign.campaign_recipients.find_by!(contact: contact)
+      expect(recipient).to be_sent
+      expect(recipient.contact_inbox.source_id).to eq(contact.phone_number.delete_prefix('+'))
+    end
+
+    it 'marks the recipient as failed with the 360dialog error' do
+      error = { error: { code: 132_001, message: 'Template name does not exist in the translation' } }
+      stub_request(:post, 'https://waba-v2.360dialog.io/messages')
+        .to_return(status: 400, body: error.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform_batch(0)
+
+      recipient = campaign.campaign_recipients.find_by!(contact: contact)
+      expect(recipient).to be_failed
+      expect(recipient.error_message).to eq('Template name does not exist in the translation')
+    end
+
+    context 'when the contact has no phone number and only a BSUID' do
+      let(:contact) { create(:contact, account: account, phone_number: nil) }
+
+      before { create(:contact_inbox, contact: contact, inbox: whatsapp_inbox, source_id: 'IN.2081978709342942') }
+
+      it 'marks the recipient as skipped without calling the 360dialog API' do
+        expect(whatsapp_channel).not_to receive(:send_template)
+
+        Whatsapp::OneoffCampaignService.new(campaign: campaign).perform_batch(0)
+
+        expect(campaign.campaign_recipients.find_by!(contact: contact)).to be_skipped
+      end
+    end
+  end
+
   it 'does not associate a normalized identity belonging to another contact' do
     contact = create(:contact, account: account, phone_number: '+5541988887777')
     contact.update_labels([label.title])

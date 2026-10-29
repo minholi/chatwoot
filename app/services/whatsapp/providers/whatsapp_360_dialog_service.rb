@@ -10,17 +10,17 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
     end
   end
 
+  # Marketing templates go through the Marketing Messages Lite API. Accounts not onboarded to it
+  # fall back to the regular /messages delivery because of the cloud_api_fallback policy.
   def send_template(phone_number, template_info, message)
-    response = HTTParty.post(
-      "#{api_base_path}/messages",
-      headers: api_headers,
-      body: {
-        messaging_product: 'whatsapp',
-        to: phone_number,
-        template: template_body_parameters(template_info),
-        type: 'template'
-      }.to_json
-    )
+    body = { messaging_product: 'whatsapp', to: phone_number, template: template_body_parameters(template_info), type: 'template' }
+    endpoint = 'messages'
+    if marketing_template?(template_info)
+      endpoint = 'marketing_messages'
+      body[:product_policy] = 'cloud_api_fallback'
+    end
+
+    response = HTTParty.post("#{api_base_path}/#{endpoint}", headers: api_headers, body: body.to_json)
 
     process_response(response, message)
   end
@@ -129,6 +129,14 @@ class Whatsapp::Providers::Whatsapp360DialogService < Whatsapp::Providers::BaseS
       },
       components: template_info[:parameters]
     }.compact
+  end
+
+  def marketing_template?(template_info)
+    whatsapp_channel.message_templates&.any? do |template|
+      template['name'] == template_info[:name] &&
+        template['language']&.downcase == template_info[:lang_code]&.downcase &&
+        template['category'] == 'MARKETING'
+    end
   end
 
   def whatsapp_reply_context(message)
