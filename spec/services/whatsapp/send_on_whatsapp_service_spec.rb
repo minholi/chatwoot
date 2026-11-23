@@ -11,8 +11,8 @@ describe Whatsapp::SendOnWhatsappService do
 
   describe '#perform' do
     before do
-      stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
-      stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+      stub_request(:post, 'https://waba-v2.360dialog.io/v1/configs/webhook')
+      stub_request(:post, 'https://waba-v2.360dialog.io/messages')
     end
 
     context 'when a valid message' do
@@ -25,6 +25,7 @@ describe Whatsapp::SendOnWhatsappService do
       let(:headers) { { 'D360-API-KEY' => api_key, 'Content-Type' => 'application/json' } }
       let(:template_body) do
         {
+          messaging_product: 'whatsapp',
           to: '123456789',
           template: {
             name: 'sample_shipping_confirmation',
@@ -61,10 +62,11 @@ describe Whatsapp::SendOnWhatsappService do
         message = create(:message, message_type: :outgoing, content: 'test',
                                    conversation: conversation, account: conversation.account)
 
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             headers: headers,
-            body: { 'to' => '123456789', 'text' => { 'body' => 'test' }, 'type' => 'text' }.to_json
+            body: { 'messaging_product' => 'whatsapp', 'context' => nil, 'to' => '123456789', 'text' => { 'body' => 'test' },
+                    'type' => 'text' }.to_json
           )
           .to_return(status: 200, body: success_response, headers: { 'content-type' => 'application/json' })
 
@@ -84,7 +86,7 @@ describe Whatsapp::SendOnWhatsappService do
 
         expect(message.reload.status).to eq('failed')
         expect(message.external_error).to eq(I18n.t('errors.whatsapp.message_outside_messaging_window'))
-        expect(a_request(:post, 'https://waba.360dialog.io/v1/messages')).not_to have_been_made
+        expect(a_request(:post, 'https://waba-v2.360dialog.io/messages')).not_to have_been_made
       end
 
       it 'marks message as failed when template name is blank' do
@@ -117,7 +119,7 @@ describe Whatsapp::SendOnWhatsappService do
                                    conversation: conversation, additional_attributes: { template_params: template_params },
                                    account: conversation.account)
 
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             headers: headers,
             body: template_body.to_json
@@ -131,7 +133,7 @@ describe Whatsapp::SendOnWhatsappService do
         message = create(:message, additional_attributes: { template_params: template_params },
                                    content: 'Your package will be delivered in 3 business days.', conversation: conversation, message_type: :outgoing,
                                    account: conversation.account)
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             headers: headers,
             body: template_body.to_json
@@ -213,10 +215,11 @@ describe Whatsapp::SendOnWhatsappService do
         message = create(:message, additional_attributes: { template_params: empty_template_params },
                                    conversation: conversation, message_type: :outgoing, account: conversation.account)
 
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             headers: headers,
             body: {
+              messaging_product: 'whatsapp',
               to: '123456789',
               template: {
                 name: 'sample_shipping_confirmation',
@@ -312,10 +315,12 @@ describe Whatsapp::SendOnWhatsappService do
                                    conversation: conversation, message_type: :outgoing)
 
         # Should send regular message, not template
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             headers: headers,
             body: {
+              messaging_product: 'whatsapp',
+              context: nil,
               to: '123456789',
               text: { body: message.content },
               type: 'text'
@@ -358,10 +363,11 @@ describe Whatsapp::SendOnWhatsappService do
       end
 
       def stub_template_request(template_params, components)
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             headers: headers,
             body: {
+              messaging_product: 'whatsapp',
               to: '123456789',
               template: {
                 name: template_params[:name],
@@ -379,10 +385,11 @@ describe Whatsapp::SendOnWhatsappService do
       end
 
       def stub_sample_template_request(components)
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             headers: headers,
             body: {
+              messaging_product: 'whatsapp',
               to: '123456789',
               template: {
                 name: 'sample_shipping_confirmation',

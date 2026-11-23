@@ -11,7 +11,7 @@ describe Whatsapp::Providers::Whatsapp360DialogService do
   describe '#sync_templates' do
     context 'when called' do
       it 'updates message_templates_last_updated even when template request fails' do
-        stub_request(:get, 'https://waba.360dialog.io/v1/configs/templates')
+        stub_request(:get, 'https://waba-v2.360dialog.io/v1/configs/templates')
           .to_return(status: 401)
 
         timstamp = whatsapp_channel.reload.message_templates_last_updated
@@ -66,9 +66,10 @@ describe Whatsapp::Providers::Whatsapp360DialogService do
                                        { title: 'Sushi', value: 'Sushi' }
                                      ]
                                    })
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             body: {
+              messaging_product: 'whatsapp',
               to: '+123456789',
               interactive: {
                 type: 'button',
@@ -103,9 +104,10 @@ describe Whatsapp::Providers::Whatsapp360DialogService do
           ]
         }.to_json
 
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             body: {
+              messaging_product: 'whatsapp',
               to: '+123456789',
               interactive: {
                 type: 'list',
@@ -141,9 +143,10 @@ describe Whatsapp::Providers::Whatsapp360DialogService do
           ]
         }.to_json
 
-        stub_request(:post, 'https://waba.360dialog.io/v1/messages')
+        stub_request(:post, 'https://waba-v2.360dialog.io/messages')
           .with(
             body: {
+              messaging_product: 'whatsapp',
               to: '+123456789',
               interactive: {
                 type: 'list',

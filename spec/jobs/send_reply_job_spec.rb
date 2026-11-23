@@ -66,7 +66,7 @@ RSpec.describe SendReplyJob do
     end
 
     it 'calls ::Whatsapp:SendOnWhatsappService when its whatsapp message' do
-      stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
+      stub_request(:post, 'https://waba-v2.360dialog.io/v1/configs/webhook')
       whatsapp_channel = create(:channel_whatsapp, sync_templates: false)
       message = create(:message, conversation: create(:conversation, inbox: whatsapp_channel.inbox))
       expect_mapped_service_to_perform(message, 'Whatsapp::SendOnWhatsappService')

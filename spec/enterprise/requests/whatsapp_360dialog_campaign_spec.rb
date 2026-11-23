@@ -69,7 +69,8 @@ RSpec.describe 'WhatsApp campaign on a 360dialog inbox', type: :request do
     }
 
     perform_enqueued_jobs do
-      post "/webhooks/whatsapp/#{channel.phone_number}", params: payload.to_json, headers: { 'CONTENT_TYPE' => 'application/json' }
+      post "/webhooks/whatsapp/#{channel.phone_number}?webhook_token=#{channel.provider_config['webhook_token']}",
+           params: payload.to_json, headers: { 'CONTENT_TYPE' => 'application/json' }
     end
     expect(response).to have_http_status(:ok)
   end

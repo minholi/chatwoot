@@ -3,7 +3,7 @@ require 'rails_helper'
 describe Whatsapp::IncomingMessageService do
   describe '#perform' do
     before do
-      stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
+      stub_request(:post, 'https://waba-v2.360dialog.io/v1/configs/webhook')
     end
 
     after do

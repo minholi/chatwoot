@@ -8,7 +8,7 @@ RSpec.describe Channels::Whatsapp::TemplatesSyncSchedulerJob do
 
   context 'when called' do
     it 'schedules templates_sync_jobs for channels where templates need to be updated' do
-      stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
+      stub_request(:post, 'https://waba-v2.360dialog.io/v1/configs/webhook')
       non_synced = create(:channel_whatsapp, sync_templates: false, message_templates_last_updated: nil)
       synced_recently = create(:channel_whatsapp, sync_templates: false, message_templates_last_updated: Time.zone.now)
       synced_old = create(:channel_whatsapp, sync_templates: false, message_templates_last_updated: 4.hours.ago)
@@ -25,7 +25,7 @@ RSpec.describe Channels::Whatsapp::TemplatesSyncSchedulerJob do
     end
 
     it 'does not schedule templates_sync_jobs for suspended accounts' do
-      stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
+      stub_request(:post, 'https://waba-v2.360dialog.io/v1/configs/webhook')
       suspended_account = create(:account, status: :suspended)
       suspended_channel = create(
         :channel_whatsapp,
@@ -43,7 +43,7 @@ RSpec.describe Channels::Whatsapp::TemplatesSyncSchedulerJob do
 
     it 'schedules templates_sync_job for oldest synced channels first' do
       stub_const('Limits::BULK_EXTERNAL_HTTP_CALLS_LIMIT', 2)
-      stub_request(:post, 'https://waba.360dialog.io/v1/configs/webhook')
+      stub_request(:post, 'https://waba-v2.360dialog.io/v1/configs/webhook')
       non_synced = create(:channel_whatsapp, sync_templates: false, message_templates_last_updated: nil)
       synced_recently = create(:channel_whatsapp, sync_templates: false, message_templates_last_updated: 4.hours.ago)
       synced_old = create(:channel_whatsapp, sync_templates: false, message_templates_last_updated: 6.hours.ago)
