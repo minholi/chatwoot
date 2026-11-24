@@ -73,7 +73,11 @@ class Conversations::EventDataPresenter < SimpleDelegator
       last_activity_at: last_activity_at.to_i,
       timestamp: last_activity_at.to_i,
       created_at: created_at.to_i,
-      updated_at: updated_at.to_f
+      updated_at: updated_at.to_f,
+      started_at: started_at&.to_i,
+      opened_at: opened_at&.to_i,
+      human_first_reply_at: human_first_reply_at&.to_i,
+      closed_at: closed_at&.to_i
     }
   end
 end

@@ -16,6 +16,7 @@ import ConversationParticipant from './ConversationParticipant.vue';
 import ContactInfo from './contact/ContactInfo.vue';
 import ContactNotes from './contact/ContactNotes.vue';
 import ConversationInfo from './ConversationInfo.vue';
+import ConversationJourney from './ConversationJourney.vue';
 import CustomAttributes from './customAttributes/CustomAttributes.vue';
 import SharedFiles from './SharedFiles.vue';
 import Draggable from 'vuedraggable';
@@ -207,6 +208,7 @@ onMounted(() => {
                 value => toggleSidebarUIState('is_conv_details_open', value)
               "
             >
+              <ConversationJourney :conversation="currentChat" />
               <ConversationInfo
                 :conversation-attributes="conversationAdditionalAttributes"
                 :contact-attributes="contactAdditionalAttributes"

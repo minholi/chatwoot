@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_16_211055) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_24_174808) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -1060,9 +1060,15 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_16_211055) do
     t.bigint "assignee_agent_bot_id"
     t.string "ai_assignee_type"
     t.datetime "status_changed_at"
+    t.datetime "started_at"
+    t.datetime "opened_at"
+    t.datetime "human_first_reply_at"
+    t.datetime "closed_at"
+    t.index ["account_id", "closed_at"], name: "index_conversations_on_account_id_and_closed_at"
     t.index ["account_id", "display_id"], name: "index_conversations_on_account_id_and_display_id", unique: true
     t.index ["account_id", "id"], name: "index_conversations_on_id_and_account_id"
     t.index ["account_id", "inbox_id", "status", "assignee_id"], name: "conv_acid_inbid_stat_asgnid_idx"
+    t.index ["account_id", "started_at"], name: "index_conversations_on_account_id_and_started_at"
     t.index ["account_id", "status", "created_at"], name: "index_conversations_on_account_id_status_created_at"
     t.index ["account_id"], name: "index_conversations_on_account_id"
     t.index ["assignee_id", "account_id"], name: "index_conversations_on_assignee_id_and_account_id"

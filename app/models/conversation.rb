@@ -8,13 +8,17 @@
 #  agent_last_seen_at     :datetime
 #  assignee_last_seen_at  :datetime
 #  cached_label_list      :text
+#  closed_at              :datetime
 #  contact_last_seen_at   :datetime
 #  custom_attributes      :jsonb
 #  first_reply_created_at :datetime
+#  human_first_reply_at   :datetime
 #  identifier             :string
 #  last_activity_at       :datetime         not null
+#  opened_at              :datetime
 #  priority               :integer
 #  snoozed_until          :datetime
+#  started_at             :datetime
 #  status                 :integer          default("open"), not null
 #  status_changed_at      :datetime
 #  uuid                   :uuid             not null
@@ -36,7 +40,9 @@
 #
 #  conv_acid_inbid_stat_asgnid_idx                    (account_id,inbox_id,status,assignee_id)
 #  index_conversations_on_account_id                  (account_id)
+#  index_conversations_on_account_id_and_closed_at    (account_id,closed_at)
 #  index_conversations_on_account_id_and_display_id   (account_id,display_id) UNIQUE
+#  index_conversations_on_account_id_and_started_at   (account_id,started_at)
 #  index_conversations_on_assignee_id_and_account_id  (assignee_id,account_id)
 #  index_conversations_on_campaign_id                 (campaign_id)
 #  index_conversations_on_contact_id                  (contact_id)
@@ -65,6 +71,7 @@ class Conversation < ApplicationRecord
   include SortHandler
   include PushDataHelper
   include ConversationMuteHelpers
+  include ConversationJourneyHandler
 
   CONVERSATION_UPDATED_ADDITIONAL_ATTRIBUTE_KEYS = %w[conversation_language auto_translate_disabled].freeze
   FILTERED_UNREAD_COUNT_ADDITIONAL_ATTRIBUTE_KEYS = %w[browser_language conversation_language mail_subject referer].freeze
@@ -138,7 +145,10 @@ class Conversation < ApplicationRecord
   before_save :set_status_changed_at
   before_create :determine_conversation_status
   before_create :ensure_waiting_since
+  # Depois de determine_conversation_status, que decide se a conversa nasce com o bot (pending).
+  before_create :track_journey
   after_create :mark_contact_as_lead
+  before_update :track_journey
 
   after_update_commit :execute_after_update_commit_callbacks
   after_create_commit :notify_conversation_creation

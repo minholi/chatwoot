@@ -1,6 +1,7 @@
 class Api::V2::Accounts::LiveReportsController < Api::V1::Accounts::BaseController
   before_action :load_conversations, only: [:conversation_metrics, :grouped_conversation_metrics]
   before_action :set_group_scope, only: [:grouped_conversation_metrics]
+  before_action :set_journey_since, only: [:journey_metrics]
 
   before_action :check_authorization
 
@@ -31,7 +32,21 @@ class Api::V2::Accounts::LiveReportsController < Api::V1::Accounts::BaseControll
     render json: group_metrics
   end
 
+  def journey_metrics
+    builder = V2::Reports::JourneyMetricsBuilder.new(account: Current.account, since: @journey_since, team_id: team&.id)
+
+    render json: { summary: builder.summary, teams: builder.by_team, agents: builder.by_agent }
+  end
+
   private
+
+  # `since` é o início do dia no fuso de quem consulta, em segundos Unix (o painel envia a meia-noite local).
+  def set_journey_since
+    since = Integer(permitted_params[:since], exception: false)
+    render json: { error: 'invalid since' }, status: :unprocessable_entity and return unless since
+
+    @journey_since = Time.zone.at(since)
+  end
 
   def check_authorization
     authorize :report, :view?
@@ -59,6 +74,6 @@ class Api::V2::Accounts::LiveReportsController < Api::V1::Accounts::BaseControll
   end
 
   def permitted_params
-    params.permit(:team_id, :group_by)
+    params.permit(:team_id, :group_by, :since)
   end
 end

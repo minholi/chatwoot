@@ -15,6 +15,12 @@ class LiveReportsAPI extends ApiClient {
       params: { group_by: groupBy },
     });
   }
+
+  getJourneyMetrics({ since, teamId } = {}) {
+    return axios.get(`${this.url}/journey_metrics`, {
+      params: { since, team_id: teamId },
+    });
+  }
 }
 
 export default new LiveReportsAPI();

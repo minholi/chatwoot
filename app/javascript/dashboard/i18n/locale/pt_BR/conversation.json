@@ -495,6 +495,17 @@
     "SELECT": {
       "PLACEHOLDER": "Nenhuma"
     },
+    "JOURNEY": {
+      "STARTED_AT": "Entrou na fila humana",
+      "OPENED_AT": "Atribuída ao agente",
+      "HUMAN_FIRST_REPLY_AT": "1ª resposta do agente",
+      "CLOSED_AT": "Resolvida em",
+      "BOT_TIME": "Tempo com o bot",
+      "QUEUE_TIME": "Espera na fila",
+      "FIRST_REPLY_TIME": "Até a 1ª resposta do agente",
+      "HANDLING_TIME": "Tempo de atendimento",
+      "IN_PROGRESS": "(em andamento)"
+    },
     "ACCORDION": {
       "CONTACT_DETAILS": "Detalhes do contato",
       "CONVERSATION_ACTIONS": "Ações da conversa",

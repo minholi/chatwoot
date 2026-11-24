@@ -514,6 +514,17 @@
     "SELECT": {
       "PLACEHOLDER": "None"
     },
+    "JOURNEY": {
+      "STARTED_AT": "Entered human queue",
+      "OPENED_AT": "Assigned to agent",
+      "HUMAN_FIRST_REPLY_AT": "First agent reply",
+      "CLOSED_AT": "Resolved at",
+      "BOT_TIME": "Time with bot",
+      "QUEUE_TIME": "Queue wait time",
+      "FIRST_REPLY_TIME": "Time to first agent reply",
+      "HANDLING_TIME": "Handling time",
+      "IN_PROGRESS": "(in progress)"
+    },
     "ACCORDION": {
       "CONTACT_DETAILS": "Contact Details",
       "CONVERSATION_ACTIONS": "Conversation Actions",

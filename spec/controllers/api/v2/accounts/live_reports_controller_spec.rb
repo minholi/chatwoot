@@ -168,4 +168,36 @@ RSpec.describe 'Api::V2::Accounts::LiveReports', type: :request do
       end
     end
   end
+
+  describe 'GET /api/v2/accounts/{account.id}/live_reports/journey_metrics' do
+    let(:path) { "/api/v2/accounts/#{account.id}/live_reports/journey_metrics" }
+    let(:since) { Time.current.beginning_of_day.to_i }
+
+    it 'returns unauthorized for agents' do
+      get path, params: { since: since }, headers: agent.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    it 'returns unprocessable entity without a valid since' do
+      get path, params: { since: 'hoje' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+
+    it 'returns summary, team and agent metrics' do
+      team_agent = create(:user, account: account, role: :agent)
+      create(:team_member, team: team, user: team_agent)
+      create(:conversation, account: account, team: team, assignee: team_agent)
+      create(:conversation, account: account, team: team)
+
+      get path, params: { since: since, team_id: team.id }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      body = response.parsed_body
+      expect(body['summary']).to include('waiting' => 1, 'in_service' => 1, 'awaiting_first_reply' => 1)
+      expect(body['teams']).to contain_exactly(include('team_id' => team.id, 'waiting' => 1, 'in_service' => 1))
+      expect(body['agents'].size).to eq(1)
+    end
+  end
 end

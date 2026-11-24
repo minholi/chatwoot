@@ -738,6 +738,10 @@ RSpec.describe Conversation do
         agent_last_seen_at: conversation.agent_last_seen_at.to_i,
         created_at: conversation.created_at.to_i,
         updated_at: conversation.updated_at.to_f,
+        started_at: conversation.started_at.to_i,
+        opened_at: nil,
+        human_first_reply_at: nil,
+        closed_at: nil,
         waiting_since: conversation.waiting_since.to_i,
         priority: nil,
         unread_count: 0

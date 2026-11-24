@@ -348,6 +348,7 @@ class Message < ApplicationRecord
     # rails issue with order of active record callbacks being executed https://github.com/rails/rails/issues/20911
     reopen_conversation
     mark_pending_conversation_as_open_for_human_response
+    conversation.record_human_first_reply(self) if human_response? && !private?
     set_conversation_activity
     dispatch_create_events
     send_reply

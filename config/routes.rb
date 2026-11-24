@@ -638,6 +638,7 @@ Rails.application.routes.draw do
             collection do
               get :conversation_metrics
               get :grouped_conversation_metrics
+              get :journey_metrics
             end
           end
         end
